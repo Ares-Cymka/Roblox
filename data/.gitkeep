@@ -1,1 +1,9 @@
 # Place static data files here (e.g. product catalogs, seed data).
+#
+# Product catalog CSVs (website catalog only — not bot inventory):
+#   data/mm2-products.csv
+#   data/adopt-me-products.csv
+#   data/sab-products.csv
+#
+# Import:
+#   npm run import:products -- --game ADOPT_ME --file data/adopt-me-products.csv
