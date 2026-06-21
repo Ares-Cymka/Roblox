@@ -1,0 +1,142 @@
+id,name,rarity,value,img,boxes
+1,$10 Voucher,rare,10,/voucher-10.png,budget
+2,1x1x1,uncommon,10,/1x1x1.png,(non-box pool)
+5,67,common,1.5,/sixty-seven.webp,sixtyseven
+6,Abyssaloco,rare,20,/abyssaloco.webp,galaxy
+10,Antonio,secret,300,/antonio.webp,highroller johnpork
+11,Arcadopus,common,5,/arcadopus.webp,galaxy
+12,Arcadragon,divine,800,/arcadragon.webp,dlc
+16,Boppin Bunny,rare,30,/boppin-bunny-v5.webp,bunny dlc
+17,Bunny and Eggy,secret,80,/bunny-and-eggy.webp,bros bunny
+18,Burguro and Fryuro,common,15,/burguro-and-fryuro.webp,food winners
+19,Capitano Moby,rare,20,/capitano-moby.webp,frigo skibidi splash
+20,Cash or Card,rare,20,/cash-or-card.webp,bros johnpork
+23,Celestial Pegasus,rare,15,/celestial-pegasus.png,lovelove
+24,Celularcini Viciosini,epic,25,,labox
+25,Cerberus,uncommon,25,/cerberus.webp,dragon ogpack sixtyseven skibidi strawberry
+26,Chicleteira Noelteira,common,5,,christmas
+27,Chillin Chili,rare,20,/chillin-chili.webp,timcheese
+48,Cigno Fulgoro,uncommon,5,/cigno-fulgoro.webp,(non-box pool)
+49,Cloverat Clapat,rare,25,/cloverat-clapat.webp,leprechaun
+52,Cooki and Milki,rare,30,/cooki-and-milki.webp,bros food
+54,CURSED Dragon,epic,150,/cursed-dragon.png,(non-box pool)
+55,CURSED Elephant,divine,3000,/cursed-elephant.png,(non-box pool)
+56,CURSED Meowl,secret,1200,/cursed-meowl.png,(non-box pool)
+57,CURSED Skibidi,secret,750,/cursed-skibidi.png,(non-box pool)
+59,Digi Narwhal,epic,150,/digi-narwhal.png,splash
+60,Divine Dragon,secret,150,/divine-dragon.webp,(non-box pool)
+61,Divine Elephant,divine,3000,/divine-elephant.webp,(non-box pool)
+62,Divine Meowl,divine,1200,/divine-meowl.webp,(non-box pool)
+63,Divine Skibidi,divine,750,/divine-skibidi.webp,(non-box pool)
+65,Dragon Aquanini,epic,250,/dragon-aquanini.png,splash
+66,Dragon Cannelloni,epic,60,/dragon-cannelloni.webp,budget dragon frigo galaxy meowl ogpack radioactive sixtyseven skibidi strawberry sub-sab timcheese tungtung winners
+67,Dragon Gingerini,epic,200,/dragon-gingerini.webp,christmas dragon food sixtyseven
+68,Dug Bros,rare,25,/dug-bros.png,bros
+69,Dug Dug Dug,epic,60,/dug-dug-dug.webp,highroller johnpork
+70,Easter Traited Elephant,divine,1200,/easter-traited-elephant.webp,bunny
+71,Elefanto Frigo,secret,900,/elefanto-frigo.webp,frigo highroller signore
+72,Elephant,divine,1000,/strawberry-elephant.webp,tungtung
+73,Esok Sekolah,common,5,,dlc
+79,Festive 67,rare,30,/festive-67.webp,christmas dlc
+80,Fortunu and Cashuru,epic,30,/fortunu-and-cashuru.webp,bros leprechaun signore
+81,Foxinini Lanterini,rare,30,/foxini-laternini.webp,meowl
+82,Fragola La La La,rare,30,/fragola-la-la-la.webp,highroller
+83,Fragrama and Chocrama,rare,30,/fragrama-and-chocrama.webp,bros food frigo meowl
+86,Galaxy Dragon,epic,150,/galaxy-dragon.webp,galaxy
+87,Galaxy Elephant,divine,3000,/galaxy-elephant.webp,galaxy
+88,Galaxy Meowl,secret,1200,/galaxy-meowl.webp,galaxy
+89,Galaxy Skibidi,secret,750,/galaxy-skibidi.webp,galaxy
+90,Garama and Madundung,uncommon,10,/garama-and-madundung.webp,bros dragon food frigo galaxy headless johnpork meowl ogpack radioactive rookie signore sixtyseven skibidi strawberry sub-sab winners
+91,Ginger Gerat,epic,150,,christmas food
+94,Globa Steppa,rare,50,/globa-steppa.webp,dlc
+95,Gobblino Uniciclino,common,7.5,,highroller
+96,Gold Gold Gold,rare,20,/gold-gold-gold.webp,leprechaun
+97,Griffin,secret,250,/griffin.webp,dragon sixtyseven
+99,Guest 666,epic,30,/guest-666.webp,timcheese
+100,Gym Bros,uncommon,25,,bros
+102,Halloween Trait Dragon Cannelloni,epic,150,/halloween-dragon-cannelloni-v2.webp,headless
+104,Headless Horseman,divine,10000,/headless-horseman.webp,headless highroller lastchance ogpack
+105,Hopilikalika Hopilikalako,uncommon,25,/hopilikalika-hopilikalako.webp,bunny
+106,Hydra Bunny,epic,80,/hydra-bunny.webp,bunny
+107,Hydra Dragon Cannelloni,rare,60,/hydra-dragon-cannelloni.webp,dragon highroller los sixtyseven
+108,Jelly Moby,rare,40,/jelly-moby.png,splash
+109,John Pork,divine,750,/john-pork.webp,johnpork labox timcheese
+110,Jolly Jolly Sahur,uncommon,20,,christmas
+112,Ketchuru and Musturu,common,5,/ketchuru.webp,bros strawberry
+113,Ketupat Bros,secret,50,,bros
+114,Ketupat Kepat,common,5,/ketupat-kepat.webp,meowl
+115,La Casa Boo,epic,40,/la-casa-boo.webp,headless labox
+116,La Christmas Grande,uncommon,7.5,/la-christmas-grande.webp,christmas labox
+117,La Easter Grande,common,5,,bunny
+118,La Extinct Grande,uncommon,7.5,,labox
+119,La Food Combinasion,rare,20,,labox
+120,La Grande Combinasion,common,5,,labox
+121,La LuckyGrande,uncommon,7.5,/la-lucky-grande.webp,leprechaun
+122,La Romantic Grande,uncommon,7.5,/la-romantic-grande.webp,labox lovelove
+123,La Secret Combinasion,uncommon,10,/la-secret-combinasion.webp,labox ogpack skibidi winners
+124,La Spooky Grande,uncommon,5,/la-spooky-grande.webp,headless labox
+125,La Supreme Combinasion,secret,150,/la-supreme-combinasion.webp,highroller labox
+126,La Taco Combinasion,rare,10,,labox
+127,Lavadorito Spinito,uncommon,5,,budget
+129,Los 67,common,5,/los-67.webp,los
+130,Los Amigos,rare,25,/los-amigos.webp,bros los
+131,Los Bros,uncommon,10,,bros
+132,Los Candies,common,5,,bros christmas
+133,Los chilis,epic,25,/chillin-chili.webp,los
+134,Los combinasionas,common,5,/stop-taking-my-chips.webp,los
+135,Los Hackers,secret,60,/los-hackers.png,los
+136,Los hotspotsitos,uncommon,10,/los-hotspotsitos.webp,los
+137,Los Moblis,common,5,/losmobil.webp,headless
+138,Los Primos,rare,25,/los-primos.png,los splash
+139,Los Puggies,uncommon,10,/los-puggies.webp,los
+140,Los Sekolahs,rare,15,/los-sekolahs.png,los
+141,Los Spaghettis,uncommon,10,/los-spaghettis.webp,los
+142,Los tacoritas,uncommon,10,/tacorita-bicicleta.webp,los
+143,Love Love Bear,secret,500,/love-love-bear.webp,highroller lovelove
+144,Lovin Rose,common,5,/lovin-rose.webp,lovelove
+145,Lucky Trait Dragon,secret,150,/lucky-trait-dragon.webp,leprechaun
+146,Lucky Trait Elephant,divine,2500,/lucky-trait-elephant.webp,leprechaun
+151,Meowl,secret,500,/meowl.webp,budget dragon meowl ogpack sixtyseven
+152,Meowl trait Dragon Cannelloni,epic,150,/meowl-dragon-cannelloni-v2.webp,meowl
+153,Money Money Bros,rare,25,,bros
+154,Money Money Puggy,common,5,/money-money-puggy.webp,johnpork
+156,Nacho Spyder,uncommon,10,,timcheese
+161,Noobini Pizzanini,common,1,/noobini-pizzanini.webp,bros budget bunny christmas dlc dragon fiftyfifty food frigo galaxy headless highroller johnpork labox lastchance leprechaun lovelove meowl ogpack radioactive rookie signore skibidi strawberry sub-sab yolo
+162,Nuclearo Dinosauro,common,5,/nuclearo-dinossauro.webp,radioactive
+163,Orcaledon,common,7.5,/orcaledon.webp,splash
+164,Pancake and Syrup,divine,300,/pancake-and-syrup.png,bros dlc frigo
+165,Popcuru and Fizzuru,rare,15,/popcuru-and-fizzuru.webp,bros strawberry
+166,Radioactive Dragon,epic,150,/radioactive-dragon.webp,radioactive
+167,Radioactive Elephant,divine,3000,/radioactive-elephant.webp,radioactive
+168,Radioactive Garama,rare,30,/radioactive-garama.webp,radioactive
+169,Radioactive Meowl,divine,1200,/radioactive-meowl.webp,radioactive
+170,Radioactive Skibidi,secret,750,/radioactive-skibidi.webp,radioactive
+171,Rainbow Dragon,epic,150,/rainbow-dragon-cannelloni.png,dragon ogpack sixtyseven
+172,Rainbow Dragon Cannennoli,epic,175,/rainbow-dragon-cannelloni.png,budget fiftyfifty highroller
+173,Rainbow Elefanto Frigo,divine,1500,/rainbow-elefanto-frigo.webp,frigo
+174,Rainbow Elephant,divine,3000,/rainbow-elephant.jpg,ogpack strawberry
+175,Rainbow Garama,rare,35,/rainbow-garama.webp,ogpack strawberry
+176,Rainbow John Pork,divine,900,/rainbow-john-pork.webp,johnpork
+177,Rainbow Meowl,divine,1200,/rainbow-meowl.webp,meowl ogpack
+178,Rainbow Skibidi,divine,700,/rainbow-skibidi.webp,ogpack skibidi
+180,Reinito Sleighito,rare,30,,christmas highroller
+181,Rico Dinero,epic,100,/rico-dinero.webp,dlc
+182,Rosey and Teddy,rare,30,/rosey-and-teddy.webp,lovelove strawberry
+183,Rubrikiko,rare,20,/rubrikiko.webp,signore
+184,Sammyni Fattini,rare,20,/sammyni-fattini.webp,johnpork timcheese
+186,Signore Carapace,divine,2500,/signore-carapace.webp,highroller signore splash
+187,Skibidi,secret,350,/skibidi.webp,ogpack skibidi
+188,Skibidi Toilet,secret,350,/skibidi.webp,budget signore tungtung
+190,Spaghetti Tualetti,common,5,/spaghettitualetti.webp,signore skibidi
+191,Spooky and Pumpky,rare,25,/spooky-and-pumpky.webp,bros headless
+192,Spooky Lucky Block,uncommon,5,/spooky-block.webp,headless
+193,Strawberry Elephant,divine,1000,/strawberry-elephant.webp,budget food lovelove ogpack strawberry winners yolo
+194,Strawberry Garama,epic,70,/strawberry-garama.webp,strawberry
+196,Swaggy Bros,uncommon,10,,bros
+197,Tang Tang Keletang,common,5,/tang-tang-keletang.webp,timcheese
+198,Te Te Sahur,common,1,/tictac-sahur.png,tungtung
+199,Tictac Sahur,common,5,/tictac-sahur.png,meowl
+200,Tim Cheese,common,2,/tim-cheese.webp,timcheese
+201,Tirilikalika Tirilikalako,secret,200,/tirilikalika.png,bros
+202,Tralaledon,uncommon,20,/tralaledon.webp,splash
+211,Ventoliero Pavonero,uncommon,15,,signore

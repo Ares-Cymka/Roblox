@@ -1,0 +1,35 @@
+id,name,rarity,value,img,boxes
+1,$10 Voucher,rare,10,/voucher-10.png,am-budget
+3,5 Fly Potions,rare,10,/am-5-ride-potions.webp,sub-am
+4,5 Ride Potions,uncommon,5,/am-5-ride-potions.webp,am-budget
+7,African Wild Dog,epic,70,/am-african-wild-dog.webp,am-giraffe
+13,Arctic Reindeer,rare,40,/am-arctic-reindeer.webp,am-frost
+14,Bat Dragon,secret,450,/am-bat-dragon.webp,am-bat
+21,Cat,common,1,/am-cat.webp,am-bat am-frost am-giraffe am-shadow sub-am
+28,Chocolate Chip Bat Dragon,rare,20,/am-chocolate-chip-bat-dragon.webp,am-bat
+29,Christmas Egg,rare,20,/am-christmas-egg.webp,am-frost
+53,Crow,epic,70,/am-crow.webp,am-shadow
+64,Dog,common,1,/am-dog.webp,am-bat am-budget am-frost am-giraffe am-shadow
+77,Evil Unicorn,epic,60,/am-evil-unicorn.webp,am-bat am-budget sub-am
+78,Fairy Bat Dragon,uncommon,15,/am-fairy-bat-dragon.webp,am-bat
+84,Frost Dragon,epic,125,/am-frost-dragon.webp,am-budget am-frost
+85,Frost Unicorn,uncommon,15,/am-frost-unicorn.webp,am-frost
+93,Giraffe,epic,150,/am-giraffe.webp,am-giraffe
+98,Grim Dragon,rare,20,/am-grim-dragon.webp,am-shadow
+101,Haetae,epic,70,/am-haetae.webp,am-frost
+111,Kangaroo,rare,20,/am-kangaroo.webp,am-giraffe
+128,Lion,uncommon,10,/am-lion.webp,am-giraffe
+147,MEGA Bat Dragon,divine,3000,/am-mega-bat-dragon.webp,am-bat
+148,MEGA Frost Dragon,divine,650,/am-mega-frost-dragon.webp,am-frost
+149,MEGA Giraffe,divine,1000,/am-mega-giraffe.webp,am-giraffe
+150,MEGA Shadow Dragon,divine,2000,/am-mega-shadow-dragon.webp,am-shadow
+155,Monkey King,rare,20,/am-monkey-king.webp,am-giraffe
+157,Neon Bat Dragon,secret,900,/am-neon-bat-dragon.webp,am-bat am-budget
+158,NEON Frost Dragon,secret,250,/am-neon-frost-dragon.webp,am-frost
+159,NEON Giraffe,secret,300,/am-neon-giraffe.webp,am-giraffe
+160,NEON Shadow Dragon,secret,600,/am-neon-shadow-dragon.webp,am-shadow
+185,Shadow Dragon,secret,300,/am-shadow-dragon.webp,am-budget am-shadow
+195,Strawberry Shortcake Bat Dragon,rare,20,/am-strawberry-shortcake-bat-dragon.webp,am-bat
+206,Undead Jousting Horse,uncommon,15,/am-undead-jousting-horse.webp,am-bat
+207,Vampire Dragon,uncommon,15,/am-vampire-dragon.webp,am-shadow
+212,Werewolf,rare,20,/am-werewolf.webp,am-shadow
