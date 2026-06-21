@@ -5,6 +5,7 @@ import path from "node:path";
 
 const projectRoot = process.cwd();
 const hasSpaceInPath = projectRoot.includes(" ");
+const isCi = Boolean(process.env.VERCEL || process.env.CI);
 
 function run(command, cwd = projectRoot, allowRobocopy = false) {
   try {
@@ -18,6 +19,11 @@ function run(command, cwd = projectRoot, allowRobocopy = false) {
   }
 }
 
+function runProductionBuild() {
+  run("npx prisma generate");
+  run("npx next build");
+}
+
 function copyOutputArtifacts(fromRoot) {
   const nextDir = path.join(fromRoot, ".next");
   const targetNext = path.join(projectRoot, ".next");
@@ -29,8 +35,8 @@ function copyOutputArtifacts(fromRoot) {
   fs.cpSync(nextDir, targetNext, { recursive: true });
 }
 
-if (!hasSpaceInPath) {
-  run("npx next build");
+if (isCi || !hasSpaceInPath) {
+  runProductionBuild();
   process.exit(0);
 }
 

@@ -48,7 +48,27 @@ npm run db:generate
 npm run db:push
 ```
 
-### 5. Run the app
+## Deploy to Vercel
+
+1. Import the repo at [vercel.com](https://vercel.com).
+2. Add these **Environment Variables** in Project Settings:
+
+| Variable | Example |
+|----------|---------|
+| `DATABASE_URL` | Neon pooled PostgreSQL URL |
+| `REDIS_URL` | Upstash Redis URL (`rediss://...`) |
+| `ADMIN_EMAIL` | `admin@example.com` |
+| `ADMIN_PASSWORD` | strong password (8+ chars) |
+| `SESSION_SECRET` | random string (32+ chars) |
+| `APP_URL` | `https://your-app.vercel.app` |
+| `DELIVERY_ADAPTER` | `mock` |
+| `DELIVERY_CONCURRENCY` | `5` |
+
+3. Deploy — `postinstall` runs `prisma generate` automatically.
+
+**Note:** Local Redis (`redis://localhost:6379`) does not work on Vercel. Use [Upstash Redis](https://upstash.com) for production queue support.
+
+### 5. Run the app (local)
 
 ```bash
 npm run dev

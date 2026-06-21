@@ -1,8 +1,20 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
+  DATABASE_URL: z
+    .string()
+    .min(1, "DATABASE_URL is required")
+    .refine(
+      (value) => value.startsWith("postgresql://") || value.startsWith("postgres://"),
+      "DATABASE_URL must be a PostgreSQL connection string"
+    ),
+  REDIS_URL: z
+    .string()
+    .min(1, "REDIS_URL is required")
+    .refine(
+      (value) => value.startsWith("redis://") || value.startsWith("rediss://"),
+      "REDIS_URL must be a Redis connection string"
+    ),
   ADMIN_EMAIL: z.string().email(),
   ADMIN_PASSWORD: z.string().min(8),
   SESSION_SECRET: z.string().min(32),
