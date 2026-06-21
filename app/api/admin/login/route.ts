@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { adminLoginSchema } from "@/server/validators/delivery";
 import {
   verifyAdminCredentials,
@@ -36,7 +37,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = await createAdminSession();
+    const adminUser = await prisma.adminUser.findUnique({
+      where: { email: parsed.data.email },
+    });
+
+    const token = await createAdminSession(adminUser?.id);
     const response = NextResponse.json({ success: true });
     response.cookies.set("admin_session", token, {
       httpOnly: true,

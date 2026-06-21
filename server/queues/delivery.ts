@@ -25,5 +25,5 @@ export function getDeliveryQueue(): Queue<DeliveryJobData> {
 export async function enqueueDelivery(data: DeliveryJobData): Promise<string> {
   const queue = getDeliveryQueue();
   const job = await queue.add("deliver", data);
-  return job.id ?? data.deliveryId;
+  return job.id ?? data.deliveryJobId;
 }

@@ -33,11 +33,17 @@ export function statusToBadgeVariant(
   status: string
 ): BadgeVariant {
   switch (status) {
+    case "DELIVERED":
     case "COMPLETED":
       return "success";
     case "FAILED":
+    case "CANCELLED":
+    case "EXPIRED":
       return "warning";
     case "PROCESSING":
+    case "WAITING_USER":
+    case "RETRYING":
+    case "QUEUED":
       return "info";
     default:
       return "neutral";

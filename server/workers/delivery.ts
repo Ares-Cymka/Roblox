@@ -1,4 +1,5 @@
 import { Worker } from "bullmq";
+import { DeliveryStatus } from "@prisma/client";
 import { getRedisConnectionOptions } from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
 import { getEnv } from "@/lib/env";
@@ -13,19 +14,28 @@ export function createDeliveryWorker(): Worker<DeliveryJobData> {
   return new Worker<DeliveryJobData>(
     DELIVERY_QUEUE_NAME,
     async (job) => {
-      const { deliveryId, claimCode, productName } = job.data;
+      const { deliveryJobId, claimCode, productName } = job.data;
 
-      await prisma.delivery.update({
-        where: { id: deliveryId },
-        data: { status: "PROCESSING" },
+      await prisma.deliveryJob.update({
+        where: { id: deliveryJobId },
+        data: {
+          status: DeliveryStatus.PROCESSING,
+          attempts: { increment: 1 },
+          lockedAt: new Date(),
+        },
       });
 
-      const result = await adapter.deliver({ deliveryId, claimCode, productName });
+      const result = await adapter.deliver({ ...job.data, claimCode, productName });
 
       if (result.success) {
-        await prisma.delivery.update({
-          where: { id: deliveryId },
-          data: { status: "COMPLETED", error: null },
+        await prisma.deliveryJob.update({
+          where: { id: deliveryJobId },
+          data: {
+            status: DeliveryStatus.DELIVERED,
+            lastError: null,
+            deliveredAt: new Date(),
+            lockedAt: null,
+          },
         });
         return result;
       }
@@ -41,13 +51,14 @@ export function createDeliveryWorker(): Worker<DeliveryJobData> {
 
 export function registerDeliveryWorkerHandlers(worker: Worker<DeliveryJobData>): void {
   worker.on("failed", async (job, err) => {
-    if (!job?.data?.deliveryId) return;
+    if (!job?.data?.deliveryJobId) return;
 
-    await prisma.delivery.update({
-      where: { id: job.data.deliveryId },
+    await prisma.deliveryJob.update({
+      where: { id: job.data.deliveryJobId },
       data: {
-        status: "FAILED",
-        error: err.message,
+        status: DeliveryStatus.FAILED,
+        lastError: err.message,
+        lockedAt: null,
       },
     });
   });

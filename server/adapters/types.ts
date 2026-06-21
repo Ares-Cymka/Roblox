@@ -1,5 +1,6 @@
 export interface DeliveryJobData {
-  deliveryId: string;
+  deliveryJobId: string;
+  claimId: string;
   claimCode: string;
   productName: string;
 }
