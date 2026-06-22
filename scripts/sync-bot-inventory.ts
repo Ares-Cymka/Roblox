@@ -12,7 +12,7 @@ interface CliOptions {
 function parseArgs(argv: string[]): CliOptions {
   let game: string | undefined;
   let username: string | undefined;
-  let quantity = 0;
+  let quantity = 10;
   let reservedQuantity = 0;
 
   for (let i = 0; i < argv.length; i++) {

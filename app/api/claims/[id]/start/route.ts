@@ -28,7 +28,10 @@ export async function POST(_request: NextRequest, context: RouteContext) {
 
     if ("error" in result) {
       return NextResponse.json(
-        { error: result.error },
+        {
+          error: result.error,
+          shortages: "shortages" in result ? result.shortages : undefined,
+        },
         { status: ERROR_STATUS[result.error] ?? 400 }
       );
     }

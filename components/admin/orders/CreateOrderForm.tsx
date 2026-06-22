@@ -159,7 +159,7 @@ export function CreateOrderForm() {
         autoComplete="off"
       />
 
-      <div className="space-y-3 rounded-xl border border-gray-100 bg-brand-bg/40 p-4">
+      <div className="space-y-3 rounded-rbx border-2 border-rbx-border bg-rbx-bg p-4">
         <p className="text-sm font-medium text-gray-900">Products</p>
 
         {loadingProducts ? (
@@ -198,11 +198,11 @@ export function CreateOrderForm() {
         )}
 
         {items.length > 0 && (
-          <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white">
+          <ul className="divide-y divide-rbx-border rounded-rbx border-2 border-rbx-border bg-rbx-elevated">
             {items.map((item) => (
               <li
                 key={item.productId}
-                className="flex items-center justify-between px-3 py-2 text-sm"
+                className="flex items-center justify-between px-3 py-2 text-sm text-rbx-muted"
               >
                 <span>
                   {productLabel(item.productId)} × {item.quantity}

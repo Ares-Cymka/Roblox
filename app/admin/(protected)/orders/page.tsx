@@ -22,7 +22,7 @@ export default async function AdminOrdersPage() {
         </Link>
       </AdminPageHeader>
 
-      <Card title="Orders" description={`${orders.length} order(s)`}>
+      <Card title="Orders" description={`${orders.length} order(s)`} elevated>
         {orders.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-gray-500">No orders yet.</p>
@@ -32,15 +32,15 @@ export default async function AdminOrdersPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="rbx-table">
               <thead>
-                <tr className="border-b border-gray-100 text-gray-500">
-                  <th className="pb-2 pr-4 font-medium">Order Code</th>
-                  <th className="pb-2 pr-4 font-medium">Claim Code</th>
-                  <th className="pb-2 pr-4 font-medium">Customer</th>
-                  <th className="pb-2 pr-4 font-medium">Items</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 font-medium">Created</th>
+                <tr>
+                  <th>Order Code</th>
+                  <th>Claim Code</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Status</th>
+                  <th>Created</th>
                 </tr>
               </thead>
               <tbody>
@@ -49,28 +49,22 @@ export default async function AdminOrdersPage() {
                   const game = order.items[0]?.product.game;
 
                   return (
-                    <tr key={order.id} className="border-b border-gray-50">
-                      <td className="py-3 pr-4 font-mono font-medium">
+                    <tr key={order.id}>
+                      <td className="font-mono font-semibold text-rbx-text">
                         {order.orderCode}
                       </td>
-                      <td className="py-3 pr-4 font-mono">
-                        {claim?.claimCode ?? "—"}
-                      </td>
-                      <td className="py-3 pr-4">
-                        {order.customer?.robloxUsername ?? "—"}
-                      </td>
-                      <td className="py-3 pr-4">
+                      <td className="font-mono">{claim?.claimCode ?? "—"}</td>
+                      <td>{order.customer?.robloxUsername ?? "—"}</td>
+                      <td>
                         {order._count.items}
                         {game ? ` · ${game}` : ""}
                       </td>
-                      <td className="py-3 pr-4">
+                      <td>
                         <Badge variant={statusToBadgeVariant(order.status)}>
                           {order.status}
                         </Badge>
                       </td>
-                      <td className="py-3 text-gray-500">
-                        {formatDate(order.createdAt)}
-                      </td>
+                      <td>{formatDate(order.createdAt)}</td>
                     </tr>
                   );
                 })}

@@ -112,16 +112,34 @@ export async function listDeliveries(limit = 50) {
           },
         },
       },
+      withdrawal: {
+        include: {
+          items: {
+            include: { product: true },
+            take: 1,
+          },
+        },
+      },
     },
   });
 
-  return jobs.map((job) => ({
-    id: job.id,
-    claimCode: job.claim.claimCode,
-    productName: job.claim.items[0]?.product.name ?? "Unknown product",
-    status: job.status,
-    createdAt: job.createdAt,
-  }));
+  return jobs.map((job) => {
+    const productName =
+      job.claim?.items[0]?.product.name ??
+      job.withdrawal?.items[0]?.product.name ??
+      "Unknown product";
+
+    const referenceCode =
+      job.claim?.claimCode ?? job.withdrawal?.withdrawalCode ?? "N/A";
+
+    return {
+      id: job.id,
+      claimCode: referenceCode,
+      productName,
+      status: job.status,
+      createdAt: job.createdAt,
+    };
+  });
 }
 
 export async function getDeliveryStats() {

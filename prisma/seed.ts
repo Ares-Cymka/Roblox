@@ -1,7 +1,63 @@
-import { BotStatus, GameType, PrismaClient } from "@prisma/client";
+import { BotStatus, DeliveryMethod, GameType, PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
+
+const TRADING_INSTRUCTIONS =
+  "Step 1: Add the bot as a friend on Roblox.\nStep 2: Join the bot's private server.\nStep 3: Complete the in-game trade.\nStep 4: Wait for website delivery confirmation.";
+
+const MAILBOX_INSTRUCTIONS =
+  "Step 1: Confirm your Roblox username.\nStep 2: The bot sends the item through the mailbox system.\nStep 3: Wait for delivery confirmation.";
+
+async function seedGameDeliveryConfigs() {
+  const configs = [
+    {
+      game: GameType.MM2,
+      deliveryMethod: DeliveryMethod.TRADING,
+      requiresFriend: true,
+      requiresPrivateServer: true,
+      requiresCustomerJoin: true,
+      requiresManualConfirmation: true,
+      instructions: TRADING_INSTRUCTIONS,
+    },
+    {
+      game: GameType.ADOPT_ME,
+      deliveryMethod: DeliveryMethod.TRADING,
+      requiresFriend: true,
+      requiresPrivateServer: true,
+      requiresCustomerJoin: true,
+      requiresManualConfirmation: true,
+      instructions: TRADING_INSTRUCTIONS,
+    },
+    {
+      game: GameType.SAB,
+      deliveryMethod: DeliveryMethod.TRADING,
+      requiresFriend: true,
+      requiresPrivateServer: true,
+      requiresCustomerJoin: true,
+      requiresManualConfirmation: true,
+      instructions: TRADING_INSTRUCTIONS,
+    },
+    {
+      game: GameType.GAG2,
+      deliveryMethod: DeliveryMethod.MAILBOX,
+      requiresFriend: false,
+      requiresPrivateServer: false,
+      requiresCustomerJoin: false,
+      requiresManualConfirmation: true,
+      instructions: MAILBOX_INSTRUCTIONS,
+    },
+  ];
+
+  for (const config of configs) {
+    await prisma.gameDeliveryConfig.upsert({
+      where: { game: config.game },
+      update: config,
+      create: config,
+    });
+    console.log(`Game delivery config ready: ${config.game} (${config.deliveryMethod})`);
+  }
+}
 
 async function main() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -51,6 +107,19 @@ async function main() {
   });
 
   console.log(`MM2 bot account ready: ${botAccount.robloxUsername} (${botAccount.status})`);
+
+  await seedGameDeliveryConfigs();
+
+  const testCustomer = await prisma.customer.upsert({
+    where: { testCode: "TESTPLAYER" },
+    update: {},
+    create: {
+      testCode: "TESTPLAYER",
+      robloxUsername: "TestPlayer",
+    },
+  });
+
+  console.log(`Test customer ready: ${testCustomer.testCode}`);
 }
 
 main()

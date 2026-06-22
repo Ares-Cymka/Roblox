@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   botHasSufficientInventory,
   getAvailableInventory,
+  getInventoryShortages,
   selectEligibleBot,
 } from "@/server/services/claim-start";
 import { BotStatus } from "@prisma/client";
@@ -73,5 +74,28 @@ describe("claim start inventory helpers", () => {
     ];
 
     expect(selectEligibleBot(bots, [{ productId: "p1", quantity: 1 }])).toBeNull();
+  });
+
+  it("reports inventory shortages with product names", () => {
+    const shortages = getInventoryShortages(
+      [
+        {
+          id: "b1",
+          robloxUsername: "lowstock",
+          status: BotStatus.ONLINE,
+          currentDeliveries: 0,
+          maxConcurrentDeliveries: 1,
+          profileUrl: "https://example.com",
+          privateServerUrl: null,
+          inventories: [{ productId: "p1", quantity: 0, reservedQuantity: 0 }],
+        },
+      ],
+      [{ productId: "p1", quantity: 1 }],
+      new Map([["p1", "Voucher"]])
+    );
+
+    expect(shortages).toEqual([
+      { productId: "p1", name: "Voucher", required: 1, available: 0 },
+    ]);
   });
 });
