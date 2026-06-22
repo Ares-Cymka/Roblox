@@ -32,6 +32,10 @@ export const withdrawalUsernameSchema = z.object({
     .regex(/^[A-Za-z0-9_]+$/, "Invalid Roblox username"),
 });
 
+export const botAssignmentActionSchema = z.object({
+  botAssignmentId: z.string().trim().min(1, "botAssignmentId is required"),
+});
+
 export const createCustomerInventorySchema = z.object({
   productId: z.string().trim().min(1),
   quantity: z.coerce.number().int().min(1).max(9999),

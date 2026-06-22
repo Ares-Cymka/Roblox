@@ -3,6 +3,22 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
+async function connectWithRetry(maxAttempts = 5, delayMs = 4000) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await prisma.$connect();
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      console.warn(
+        `Database unreachable (attempt ${attempt}/${maxAttempts}). ` +
+          "Neon compute may be waking up — retrying..."
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 const TRADING_INSTRUCTIONS =
   "Step 1: Add the bot as a friend on Roblox.\nStep 2: Join the bot's private server.\nStep 3: Complete the in-game trade.\nStep 4: Wait for website delivery confirmation.";
 
@@ -60,6 +76,8 @@ async function seedGameDeliveryConfigs() {
 }
 
 async function main() {
+  await connectWithRetry();
+
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
 
@@ -94,6 +112,7 @@ async function main() {
     update: {
       status: BotStatus.ONLINE,
       maxConcurrentDeliveries: 1,
+      currentDeliveries: 0,
       profileUrl: "https://www.roblox.com/users/search?keyword=radiomirrorq",
     },
     create: {

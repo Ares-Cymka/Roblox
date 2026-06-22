@@ -1,7 +1,9 @@
 export interface DeliveryJobData {
   deliveryJobId: string;
-  claimId: string;
-  claimCode: string;
+  claimId?: string;
+  claimCode?: string;
+  withdrawalId?: string;
+  withdrawalCode?: string;
   productName: string;
 }
 

@@ -1,4 +1,6 @@
 import {
+  BotAssignmentStatus,
+  DeliveryStatus,
   GameType,
   WithdrawalStatus,
   Prisma,
@@ -8,15 +10,72 @@ import {
   FRAUD_REVIEW_THRESHOLD,
   generateWithdrawalCode,
 } from "@/lib/utils";
+import { getWithdrawalStatusMessage } from "@/lib/withdrawal-status";
 import {
   assignBotAndCreateDeliveryJob,
   formatAssignmentPayload,
 } from "@/server/services/delivery-request";
+import {
+  buildWithdrawalDeliveryPayload,
+  enqueueDeliveryJobOnce,
+} from "@/server/services/delivery-queue";
 import { reserveCustomerInventoryItems } from "@/server/services/customer-inventory";
 import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
+import {
+  cancelDeliveryJob,
+  findBlockingBotDelivery,
+  releaseBotAssignmentCapacity,
+} from "@/server/services/bot-capacity";
 
 export const SUPPORT_REQUIRED_MESSAGE =
   "This withdrawal requires customer service review for fraud protection. Please contact support.";
+
+const TERMINAL_WITHDRAWAL_STATUSES: WithdrawalStatus[] = [
+  WithdrawalStatus.DELIVERED,
+  WithdrawalStatus.FAILED,
+  WithdrawalStatus.CANCELLED,
+  WithdrawalStatus.SUPPORT_REQUIRED,
+];
+
+const withdrawalInclude = {
+  items: { include: { product: true } },
+  deliveryJob: {
+    include: {
+      logs: { orderBy: { createdAt: "desc" as const }, take: 50 },
+    },
+  },
+  botAssignments: {
+    include: { botAccount: true },
+    orderBy: { assignedAt: "desc" as const },
+    take: 1,
+  },
+} satisfies Prisma.WithdrawalInclude;
+
+type LoadedWithdrawal = Prisma.WithdrawalGetPayload<{
+  include: typeof withdrawalInclude;
+}>;
+
+function getPrimaryProductName(withdrawal: LoadedWithdrawal): string {
+  const first = withdrawal.items[0];
+  if (!first) return "items";
+  if (withdrawal.items.length === 1) return first.product.name;
+  return `${first.product.name} +${withdrawal.items.length - 1} more`;
+}
+
+async function queueWithdrawalDelivery(withdrawal: LoadedWithdrawal) {
+  if (!withdrawal.deliveryJob) {
+    throw new Error("Delivery job not found");
+  }
+
+  await enqueueDeliveryJobOnce(
+    buildWithdrawalDeliveryPayload({
+      deliveryJobId: withdrawal.deliveryJob.id,
+      withdrawalId: withdrawal.id,
+      withdrawalCode: withdrawal.withdrawalCode,
+      productName: getPrimaryProductName(withdrawal),
+    })
+  );
+}
 
 async function generateUniqueWithdrawalCode(): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -42,41 +101,19 @@ function calculateTotalValue(
 async function loadWithdrawal(withdrawalCode: string) {
   return prisma.withdrawal.findUnique({
     where: { withdrawalCode },
-    include: {
-      items: { include: { product: true } },
-      deliveryJob: true,
-      botAssignments: {
-        include: { botAccount: true },
-        orderBy: { assignedAt: "desc" },
-        take: 1,
-      },
-    },
+    include: withdrawalInclude,
   });
 }
 
 async function loadWithdrawalById(withdrawalId: string) {
   return prisma.withdrawal.findUnique({
     where: { id: withdrawalId },
-    include: {
-      items: { include: { product: true } },
-      deliveryJob: true,
-      botAssignments: {
-        include: { botAccount: true },
-        orderBy: { assignedAt: "desc" },
-        take: 1,
-      },
-    },
+    include: withdrawalInclude,
   });
 }
 
 export function formatWithdrawalResponse(
-  withdrawal: Prisma.WithdrawalGetPayload<{
-    include: {
-      items: { include: { product: true } };
-      deliveryJob: true;
-      botAssignments: { include: { botAccount: true }; take: 1 };
-    };
-  }>,
+  withdrawal: LoadedWithdrawal,
   gameConfig?: {
     game: GameType;
     deliveryMethod: string;
@@ -132,8 +169,18 @@ export function formatWithdrawalResponse(
         )
       : null,
     deliveryJob: withdrawal.deliveryJob
-      ? { status: withdrawal.deliveryJob.status }
+      ? {
+          id: withdrawal.deliveryJob.id,
+          status: withdrawal.deliveryJob.status,
+        }
       : null,
+    logs: (withdrawal.deliveryJob?.logs ?? []).map((log) => ({
+      id: log.id,
+      level: log.level,
+      message: log.message,
+      createdAt: log.createdAt,
+    })),
+    statusMessage: getWithdrawalStatusMessage(withdrawal.status),
     supportMessage:
       withdrawal.status === WithdrawalStatus.SUPPORT_REQUIRED
         ? SUPPORT_REQUIRED_MESSAGE
@@ -215,11 +262,7 @@ export async function createWithdrawal(input: {
           })),
         },
       },
-      include: {
-        items: { include: { product: true } },
-        deliveryJob: true,
-        botAssignments: { include: { botAccount: true }, take: 1 },
-      },
+      include: withdrawalInclude,
     });
   });
 
@@ -265,11 +308,7 @@ export async function linkWithdrawalUsername(
       robloxUsername: robloxUsername.trim(),
       status: WithdrawalStatus.QUEUED,
     },
-    include: {
-      items: { include: { product: true } },
-      deliveryJob: true,
-      botAssignments: { include: { botAccount: true }, take: 1 },
-    },
+    include: withdrawalInclude,
   });
 
   const game = updated.items[0]?.product.game;
@@ -340,28 +379,256 @@ export async function startWithdrawal(withdrawalId: string) {
   );
 
   if (!result.success) {
+    if (result.error === "No bot available") {
+      const blocking = await findBlockingBotDelivery(game);
+      const blockingCode =
+        blocking?.withdrawalCode ?? blocking?.claimCode ?? null;
+      const hint = blockingCode
+        ? `The delivery bot is currently assigned to ${blocking?.withdrawalCode ? "withdrawal" : "claim"} ${blockingCode}. Complete or cancel it in Admin first.`
+        : "All delivery bots are currently busy. Please try again shortly.";
+
+      return {
+        error: result.error,
+        shortages: result.shortages,
+        hint,
+        blockingCode,
+        blockingBot: blocking?.botUsername ?? null,
+      };
+    }
+
     return {
       error: result.error,
       shortages: result.shortages,
     };
   }
 
+  const gameConfig = await getGameDeliveryConfig(game);
+
+  const usesTradingFlow =
+    gameConfig?.requiresFriend !== false ||
+    gameConfig?.requiresCustomerJoin !== false;
+
+  const nextStatus = usesTradingFlow
+    ? WithdrawalStatus.WAITING_FRIEND_REQUEST
+    : WithdrawalStatus.QUEUED;
+
   const updated = await prisma.withdrawal.update({
     where: { id: withdrawal.id },
-    data: { status: WithdrawalStatus.WAITING_FRIEND_REQUEST },
-    include: {
-      items: { include: { product: true } },
-      deliveryJob: true,
-      botAssignments: {
-        include: { botAccount: true },
-        orderBy: { assignedAt: "desc" },
-        take: 1,
-      },
-    },
+    data: { status: nextStatus },
+    include: withdrawalInclude,
   });
 
-  const gameConfig = await getGameDeliveryConfig(game);
+  if (!usesTradingFlow && updated.deliveryJob) {
+    await prisma.$transaction(async (tx) => {
+      await tx.deliveryJob.update({
+        where: { id: updated.deliveryJob!.id },
+        data: { status: DeliveryStatus.QUEUED },
+      });
+
+      await tx.deliveryLog.create({
+        data: {
+          deliveryJobId: updated.deliveryJob!.id,
+          withdrawalId: updated.id,
+          message: "Mailbox delivery queued for bot processing.",
+        },
+      });
+    });
+
+    const reloaded = await loadWithdrawalById(withdrawal.id);
+    if (!reloaded) {
+      return { error: "Withdrawal not found" as const };
+    }
+
+    await queueWithdrawalDelivery(reloaded);
+    return formatWithdrawalResponse(reloaded, gameConfig);
+  }
+
   return formatWithdrawalResponse(updated, gameConfig);
+}
+
+export async function getWithdrawalById(withdrawalId: string) {
+  const withdrawal = await loadWithdrawalById(withdrawalId);
+  if (!withdrawal) return null;
+
+  const game = withdrawal.items[0]?.product.game;
+  const gameConfig = game ? await getGameDeliveryConfig(game) : null;
+
+  return formatWithdrawalResponse(withdrawal, gameConfig);
+}
+
+function verifyWithdrawalActionAllowed(withdrawal: LoadedWithdrawal) {
+  if (TERMINAL_WITHDRAWAL_STATUSES.includes(withdrawal.status)) {
+    return {
+      error: `Withdrawal is ${withdrawal.status.toLowerCase().replace(/_/g, " ")}` as const,
+    };
+  }
+  return null;
+}
+
+function verifyBotAssignmentOwnership(
+  withdrawal: LoadedWithdrawal,
+  botAssignmentId: string
+) {
+  const assignment = withdrawal.botAssignments[0];
+  if (!assignment || assignment.id !== botAssignmentId) {
+    return { error: "Bot assignment not found" as const };
+  }
+  return { assignment };
+}
+
+export async function markWithdrawalFriendRequestSent(
+  withdrawalId: string,
+  botAssignmentId: string
+) {
+  const withdrawal = await loadWithdrawalById(withdrawalId);
+  if (!withdrawal) {
+    return { error: "Withdrawal not found" as const };
+  }
+
+  const blocked = verifyWithdrawalActionAllowed(withdrawal);
+  if (blocked) return blocked;
+
+  const ownership = verifyBotAssignmentOwnership(withdrawal, botAssignmentId);
+  if ("error" in ownership) return ownership;
+
+  const { assignment } = ownership;
+
+  if (
+    assignment.status === BotAssignmentStatus.FRIEND_REQUEST_SENT ||
+    assignment.status === BotAssignmentStatus.READY_TO_JOIN ||
+    assignment.status === BotAssignmentStatus.IN_GAME ||
+    assignment.status === BotAssignmentStatus.DELIVERING ||
+    assignment.status === BotAssignmentStatus.COMPLETED
+  ) {
+    const game = withdrawal.items[0]?.product.game;
+    const gameConfig = game ? await getGameDeliveryConfig(game) : null;
+    return formatWithdrawalResponse(withdrawal, gameConfig);
+  }
+
+  if (assignment.status !== BotAssignmentStatus.FRIEND_REQUEST_PENDING) {
+    return { error: "Invalid bot assignment status" as const };
+  }
+
+  if (!withdrawal.deliveryJob) {
+    return { error: "Delivery job not found" as const };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.botAssignment.update({
+      where: { id: assignment.id },
+      data: { status: BotAssignmentStatus.FRIEND_REQUEST_SENT },
+    });
+
+    await tx.withdrawal.update({
+      where: { id: withdrawal.id },
+      data: { status: WithdrawalStatus.WAITING_JOIN },
+    });
+
+    await tx.deliveryLog.create({
+      data: {
+        deliveryJobId: withdrawal.deliveryJob!.id,
+        withdrawalId: withdrawal.id,
+        message: "Customer marked friend request as sent.",
+      },
+    });
+  });
+
+  const updated = await loadWithdrawalById(withdrawalId);
+  if (!updated) {
+    return { error: "Withdrawal not found" as const };
+  }
+
+  const game = updated.items[0]?.product.game;
+  const gameConfig = game ? await getGameDeliveryConfig(game) : null;
+  return formatWithdrawalResponse(updated, gameConfig);
+}
+
+export async function joinWithdrawalGame(
+  withdrawalId: string,
+  botAssignmentId: string
+) {
+  const withdrawal = await loadWithdrawalById(withdrawalId);
+  if (!withdrawal) {
+    return { error: "Withdrawal not found" as const };
+  }
+
+  const blocked = verifyWithdrawalActionAllowed(withdrawal);
+  if (blocked) return blocked;
+
+  const ownership = verifyBotAssignmentOwnership(withdrawal, botAssignmentId);
+  if ("error" in ownership) return ownership;
+
+  const { assignment } = ownership;
+  const game = withdrawal.items[0]?.product.game;
+  const gameConfig = game ? await getGameDeliveryConfig(game) : null;
+  const privateServerUrl = assignment.botAccount.privateServerUrl;
+
+  if (
+    assignment.status === BotAssignmentStatus.IN_GAME ||
+    assignment.status === BotAssignmentStatus.DELIVERING ||
+    assignment.status === BotAssignmentStatus.COMPLETED
+  ) {
+    return {
+      ...formatWithdrawalResponse(withdrawal, gameConfig),
+      privateServerUrl,
+    };
+  }
+
+  if (gameConfig?.requiresCustomerJoin && !privateServerUrl) {
+    return { error: "Bot private server URL is not configured" as const };
+  }
+
+  if (
+    assignment.status !== BotAssignmentStatus.FRIEND_REQUEST_SENT &&
+    assignment.status !== BotAssignmentStatus.READY_TO_JOIN
+  ) {
+    return { error: "Friend request must be sent before joining" as const };
+  }
+
+  if (!withdrawal.deliveryJob) {
+    return { error: "Delivery job not found" as const };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.botAssignment.update({
+      where: { id: assignment.id },
+      data: { status: BotAssignmentStatus.IN_GAME },
+    });
+
+    await tx.withdrawal.update({
+      where: { id: withdrawal.id },
+      data: { status: WithdrawalStatus.QUEUED },
+    });
+
+    await tx.deliveryJob.update({
+      where: { id: withdrawal.deliveryJob!.id },
+      data: { status: DeliveryStatus.QUEUED },
+    });
+
+    await tx.deliveryLog.create({
+      data: {
+        deliveryJobId: withdrawal.deliveryJob!.id,
+        withdrawalId: withdrawal.id,
+        message: "Customer clicked Join Game and delivery was queued.",
+      },
+    });
+  });
+
+  const updated = await loadWithdrawalById(withdrawalId);
+  if (!updated) {
+    return { error: "Withdrawal not found" as const };
+  }
+
+  await queueWithdrawalDelivery(updated);
+
+  const refreshedGameConfig = game
+    ? await getGameDeliveryConfig(game)
+    : null;
+
+  return {
+    ...formatWithdrawalResponse(updated, refreshedGameConfig),
+    privateServerUrl: updated.botAssignments[0]?.botAccount.privateServerUrl ?? null,
+  };
 }
 
 export async function listWithdrawals(limit = 100) {
@@ -402,17 +669,27 @@ export async function approveWithdrawalSupport(withdrawalId: string) {
 export async function cancelWithdrawal(withdrawalId: string) {
   const withdrawal = await prisma.withdrawal.findUnique({
     where: { id: withdrawalId },
-    include: { items: true, deliveryJob: true },
+    include: {
+      items: true,
+      deliveryJob: true,
+      botAssignments: {
+        orderBy: { assignedAt: "desc" },
+        take: 1,
+      },
+    },
   });
 
   if (!withdrawal) return null;
 
-  if (
-    withdrawal.status === WithdrawalStatus.DELIVERED ||
-    withdrawal.deliveryJob
-  ) {
-    throw new Error("Cannot cancel withdrawal after delivery started");
+  if (withdrawal.status === WithdrawalStatus.DELIVERED) {
+    throw new Error("Cannot cancel a completed withdrawal");
   }
+
+  if (withdrawal.status === WithdrawalStatus.CANCELLED) {
+    return withdrawal;
+  }
+
+  const assignment = withdrawal.botAssignments[0];
 
   return prisma.$transaction(async (tx) => {
     for (const item of withdrawal.items) {
@@ -440,6 +717,10 @@ export async function cancelWithdrawal(withdrawalId: string) {
       }
     }
 
+    if (withdrawal.deliveryJob) {
+      await cancelDeliveryJob(withdrawal.deliveryJob.id, tx);
+    }
+
     return tx.withdrawal.update({
       where: { id: withdrawalId },
       data: { status: WithdrawalStatus.CANCELLED },
@@ -448,5 +729,10 @@ export async function cancelWithdrawal(withdrawalId: string) {
         customer: true,
       },
     });
+  }).then(async (cancelled) => {
+    if (assignment) {
+      await releaseBotAssignmentCapacity(assignment.id, BotAssignmentStatus.CANCELLED);
+    }
+    return cancelled;
   });
 }

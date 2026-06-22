@@ -6,6 +6,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { syncGameBotCapacities } from "@/server/services/bot-capacity";
 
 export type DeliveryItem = {
   productId: string;
@@ -128,6 +129,8 @@ export async function findEligibleBot(
     available: number;
   }>;
 }> {
+  await syncGameBotCapacities(game);
+
   const bots = await prisma.botAccount.findMany({
     where: { game, status: BotStatus.ONLINE },
     include: { inventories: true },

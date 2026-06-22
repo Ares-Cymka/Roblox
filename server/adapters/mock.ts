@@ -6,9 +6,11 @@ export class MockDeliveryAdapter implements DeliveryAdapter {
   async deliver(data: DeliveryJobData): Promise<DeliveryResult> {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
+    const reference = data.withdrawalCode ?? data.claimCode ?? data.deliveryJobId;
+
     return {
       success: true,
-      message: `Mock delivery completed for ${data.productName} (${data.claimCode})`,
+      message: `Mock delivery completed for ${data.productName} (${reference})`,
     };
   }
 }

@@ -10,7 +10,7 @@ const ERROR_STATUS: Record<string, number> = {
   "Withdrawal cancelled": 409,
   "Invalid withdrawal status": 409,
   "Roblox username is required": 400,
-  "No bot available": 503,
+  "No bot available": 409,
   "Not enough bot inventory": 409,
 };
 
@@ -29,8 +29,14 @@ export async function POST(_request: NextRequest, context: RouteContext) {
 
     if ("error" in result) {
       return NextResponse.json(
-        { error: result.error, shortages: result.shortages },
-        { status: ERROR_STATUS[result.error] ?? 400 }
+        {
+          error: result.error,
+          shortages: "shortages" in result ? result.shortages : undefined,
+          hint: "hint" in result ? result.hint : undefined,
+          blockingCode: "blockingCode" in result ? result.blockingCode : undefined,
+          blockingBot: "blockingBot" in result ? result.blockingBot : undefined,
+        },
+        { status: ERROR_STATUS[result.error as keyof typeof ERROR_STATUS] ?? 400 }
       );
     }
 

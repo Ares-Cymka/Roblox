@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -11,6 +11,9 @@ import { Badge, statusToBadgeVariant } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
 import { BotAssignmentCard } from "@/components/claim/BotAssignmentCard";
 import { DeliveryInstructionsCard } from "@/components/withdraw/DeliveryInstructionsCard";
+import { DeliveryLogsCard } from "@/components/withdraw/DeliveryLogsCard";
+import { WithdrawalStepIndicator } from "@/components/withdraw/WithdrawalStepIndicator";
+import { WithdrawalStatusBanner } from "@/components/withdraw/WithdrawalStatusBanner";
 
 interface WithdrawalData {
   withdrawal: {
@@ -47,8 +50,23 @@ interface WithdrawalData {
     };
     assignedItems: Array<{ productId: string; name: string; quantity: number }>;
   } | null;
+  deliveryJob: { id: string; status: string } | null;
+  logs: Array<{
+    id: string;
+    level: string;
+    message: string;
+    createdAt: string;
+  }>;
+  statusMessage: string | null;
   supportMessage: string | null;
 }
+
+const TERMINAL_STATUSES = new Set([
+  "DELIVERED",
+  "FAILED",
+  "CANCELLED",
+  "SUPPORT_REQUIRED",
+]);
 
 export default function WithdrawPage() {
   const params = useParams<{ withdrawalCode: string }>();
@@ -57,41 +75,75 @@ export default function WithdrawPage() {
   const [robloxUsername, setRobloxUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  async function loadWithdrawal() {
-    setLoading(true);
-    setError(null);
+  const refreshWithdrawal = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!options?.silent) {
+        setLoading(true);
+      }
+      setError(null);
+
+      try {
+        const res = await fetch(
+          `/api/withdrawals/lookup/${encodeURIComponent(withdrawalCode)}`
+        );
+        const json = await res.json();
+
+        if (!res.ok) {
+          setError(json.error ?? "Failed to load withdrawal");
+          setData(null);
+          return;
+        }
+
+        setData(json);
+        setRobloxUsername(json.withdrawal.robloxUsername ?? "");
+      } catch {
+        setError("Network error. Please try again.");
+      } finally {
+        if (!options?.silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [withdrawalCode]
+  );
+
+  const pollWithdrawal = useCallback(async () => {
+    if (!data?.withdrawal.id) return;
 
     try {
-      const res = await fetch(
-        `/api/withdrawals/lookup/${encodeURIComponent(withdrawalCode)}`
-      );
+      const res = await fetch(`/api/withdrawals/${data.withdrawal.id}`);
       const json = await res.json();
-
-      if (!res.ok) {
-        setError(json.error ?? "Failed to load withdrawal");
-        setData(null);
-        return;
+      if (res.ok) {
+        setData(json);
+        setRobloxUsername(json.withdrawal.robloxUsername ?? "");
       }
-
-      setData(json);
-      setRobloxUsername(json.withdrawal.robloxUsername ?? "");
     } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
+      // Keep polling quietly on transient network errors.
     }
-  }
+  }, [data?.withdrawal.id]);
 
   useEffect(() => {
-    loadWithdrawal();
-  }, [withdrawalCode]);
+    refreshWithdrawal();
+  }, [refreshWithdrawal]);
+
+  useEffect(() => {
+    if (!data?.withdrawal.id) return;
+    if (TERMINAL_STATUSES.has(data.withdrawal.status)) return;
+
+    const interval = window.setInterval(() => {
+      void pollWithdrawal();
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [data?.withdrawal.id, data?.withdrawal.status, pollWithdrawal]);
 
   async function handleUsername(e: FormEvent) {
     e.preventDefault();
     if (!data) return;
 
-    setLoading(true);
+    setActionLoading(true);
     setError(null);
 
     try {
@@ -114,14 +166,14 @@ export default function WithdrawPage() {
     } catch {
       setError("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   }
 
   async function handleStartWithdrawal() {
     if (!data) return;
 
-    setLoading(true);
+    setActionLoading(true);
     setError(null);
 
     try {
@@ -131,7 +183,21 @@ export default function WithdrawPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        setError(json.error ?? "Failed to start withdrawal delivery");
+        const shortageText = Array.isArray(json.shortages)
+          ? json.shortages
+              .map(
+                (entry: { name: string; required: number; available: number }) =>
+                  `${entry.name}: need ${entry.required}, bot has ${entry.available}`
+              )
+              .join("; ")
+          : null;
+
+        setError(
+          json.hint ??
+            (shortageText
+              ? `${json.error ?? "Failed to start withdrawal delivery"} (${shortageText})`
+              : json.error ?? "Failed to start withdrawal delivery")
+        );
         return;
       }
 
@@ -139,7 +205,73 @@ export default function WithdrawPage() {
     } catch {
       setError("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setActionLoading(false);
+    }
+  }
+
+  async function handleFriendRequestSent() {
+    if (!data?.assignment) return;
+
+    setActionLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `/api/withdrawals/${data.withdrawal.id}/friend-request-sent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ botAssignmentId: data.assignment.id }),
+        }
+      );
+      const json = await res.json();
+
+      if (!res.ok) {
+        setError(json.error ?? "Failed to update friend request status");
+        return;
+      }
+
+      setData(json);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleJoinGame() {
+    if (!data?.assignment) return;
+
+    setActionLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `/api/withdrawals/${data.withdrawal.id}/join-game`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ botAssignmentId: data.assignment.id }),
+        }
+      );
+      const json = await res.json();
+
+      if (!res.ok) {
+        setError(json.error ?? "Failed to join game");
+        return;
+      }
+
+      setData(json);
+
+      const serverUrl =
+        json.privateServerUrl ?? data.assignment.bot.privateServerUrl;
+      if (serverUrl) {
+        window.open(serverUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -169,6 +301,12 @@ export default function WithdrawPage() {
     data.withdrawal.status === "QUEUED" &&
     Boolean(data.withdrawal.robloxUsername) &&
     !data.assignment;
+  const statusBannerVariant =
+    data.withdrawal.status === "DELIVERED"
+      ? "success"
+      : isSupportRequired
+        ? "warning"
+        : "info";
 
   return (
     <PageShell narrow>
@@ -178,6 +316,24 @@ export default function WithdrawPage() {
       />
 
       <div className="space-y-6">
+        <Card title="Progress" elevated>
+          <WithdrawalStepIndicator
+            deliveryMethod={data.gameConfig?.deliveryMethod}
+            withdrawalStatus={data.withdrawal.status}
+            hasUsername={Boolean(data.withdrawal.robloxUsername)}
+            hasAssignment={Boolean(data.assignment)}
+            assignmentStatus={data.assignment?.status}
+            deliveryJobStatus={data.deliveryJob?.status}
+          />
+        </Card>
+
+        {(data.statusMessage || data.supportMessage) && (
+          <WithdrawalStatusBanner
+            message={data.supportMessage ?? data.statusMessage}
+            variant={statusBannerVariant}
+          />
+        )}
+
         <Card title="Withdrawal Details" elevated>
           <dl className="space-y-3">
             <div className="flex justify-between gap-4">
@@ -194,10 +350,30 @@ export default function WithdrawPage() {
                 </Badge>
               </dd>
             </div>
+            {data.withdrawal.robloxUsername && (
+              <div className="flex justify-between gap-4">
+                <dt className="rbx-label">Roblox Username</dt>
+                <dd className="rbx-value">{data.withdrawal.robloxUsername}</dd>
+              </div>
+            )}
             <div className="flex justify-between gap-4">
               <dt className="rbx-label">Total Value</dt>
               <dd className="rbx-value">${data.withdrawal.totalValue.toFixed(2)}</dd>
             </div>
+            {data.game && (
+              <div className="flex justify-between gap-4">
+                <dt className="rbx-label">Game</dt>
+                <dd className="rbx-value">{data.game}</dd>
+              </div>
+            )}
+            {data.gameConfig?.deliveryMethod && (
+              <div className="flex justify-between gap-4">
+                <dt className="rbx-label">Delivery Method</dt>
+                <dd className="rbx-value">
+                  {data.gameConfig.deliveryMethod.replace(/_/g, " ")}
+                </dd>
+              </div>
+            )}
           </dl>
 
           <div className="rbx-divider mt-5 pt-4">
@@ -218,10 +394,6 @@ export default function WithdrawPage() {
           </div>
         </Card>
 
-        {isSupportRequired && data.supportMessage && (
-          <Alert>{data.supportMessage}</Alert>
-        )}
-
         {!isSupportRequired && (
           <DeliveryInstructionsCard
             game={data.game}
@@ -239,8 +411,13 @@ export default function WithdrawPage() {
                 onChange={(e) => setRobloxUsername(e.target.value)}
                 required
               />
-              <Button type="submit" disabled={loading} className="w-full" size="lg">
-                {loading ? "Saving..." : "Continue"}
+              <Button
+                type="submit"
+                disabled={actionLoading}
+                className="w-full"
+                size="lg"
+              >
+                {actionLoading ? "Saving..." : "Continue"}
               </Button>
             </form>
           </Card>
@@ -253,12 +430,12 @@ export default function WithdrawPage() {
             </p>
             <Button
               type="button"
-              disabled={loading}
+              disabled={actionLoading}
               onClick={handleStartWithdrawal}
               className="w-full"
               size="lg"
             >
-              {loading ? "Starting..." : "Start Delivery"}
+              {actionLoading ? "Starting..." : "Start Delivery"}
             </Button>
           </Card>
         )}
@@ -267,8 +444,14 @@ export default function WithdrawPage() {
           <BotAssignmentCard
             assignment={data.assignment}
             gameConfig={data.gameConfig}
+            withdrawalStatus={data.withdrawal.status}
+            onFriendRequestSent={handleFriendRequestSent}
+            onJoinGame={handleJoinGame}
+            actionLoading={actionLoading}
           />
         )}
+
+        <DeliveryLogsCard logs={data.logs} />
 
         {error && <Alert>{error}</Alert>}
       </div>

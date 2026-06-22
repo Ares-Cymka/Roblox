@@ -1,6 +1,10 @@
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import {
+  canJoinGame,
+  canSendFriendRequest,
+} from "@/lib/withdrawal-status";
 
 interface GameConfig {
   deliveryMethod: string;
@@ -28,14 +32,28 @@ interface BotAssignmentCardProps {
     assignedItems: AssignedItem[];
   };
   gameConfig?: GameConfig | null;
+  withdrawalStatus?: string;
+  onFriendRequestSent?: () => void;
+  onJoinGame?: () => void;
+  actionLoading?: boolean;
 }
 
 export function BotAssignmentCard({
   assignment,
   gameConfig,
+  withdrawalStatus,
+  onFriendRequestSent,
+  onJoinGame,
+  actionLoading = false,
 }: BotAssignmentCardProps) {
-  const showFriend = gameConfig?.requiresFriend ?? true;
-  const showJoin = gameConfig?.requiresCustomerJoin ?? true;
+  const isMailbox = gameConfig?.deliveryMethod === "MAILBOX";
+  const showFriend = gameConfig?.requiresFriend ?? !isMailbox;
+  const showJoin = gameConfig?.requiresCustomerJoin ?? !isMailbox;
+  const friendRequestEnabled = canSendFriendRequest(assignment.status);
+  const joinEnabled =
+    Boolean(onJoinGame) &&
+    canJoinGame(assignment.status, withdrawalStatus ?? "") &&
+    (!gameConfig?.requiresCustomerJoin || Boolean(assignment.bot.privateServerUrl));
 
   return (
     <Card title="Your Delivery Bot" elevated>
@@ -66,38 +84,63 @@ export function BotAssignmentCard({
         </ul>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        {showFriend && (
-          <>
+      {isMailbox && !showFriend && !showJoin && (
+        <p className="mt-5 rounded-rbx border-2 border-rbx-green/30 bg-rbx-green/10 px-4 py-3 text-sm leading-relaxed text-green-200">
+          Your item will be sent through the mailbox system. Keep this page open
+          for delivery updates.
+        </p>
+      )}
+
+      {(showFriend || showJoin) && (
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          {showFriend && assignment.bot.profileUrl && (
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  window.open(
+                    assignment.bot.profileUrl,
+                    "_blank",
+                    "noopener,noreferrer"
+                  )
+                }
+              >
+                Add Bot
+              </Button>
+              <Button
+                type="button"
+                variant="pending"
+                disabled={
+                  onFriendRequestSent
+                    ? !friendRequestEnabled || actionLoading
+                    : false
+                }
+                onClick={() => onFriendRequestSent?.()}
+              >
+                {actionLoading ? "Updating..." : "I Sent Friend Request"}
+              </Button>
+            </>
+          )}
+          {showJoin && (
             <Button
               type="button"
-              variant="secondary"
-              onClick={() =>
-                window.open(
-                  assignment.bot.profileUrl,
-                  "_blank",
-                  "noopener,noreferrer"
-                )
-              }
+              disabled={!joinEnabled || actionLoading}
+              variant="outline"
+              onClick={onJoinGame}
             >
-              Add Bot
+              {actionLoading ? "Updating..." : "Join Game"}
             </Button>
-            <Button type="button" variant="pending">
-              I Sent Friend Request
-            </Button>
-          </>
-        )}
-        {showJoin && (
-          <Button type="button" disabled variant="outline">
-            Join Game
-          </Button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
-      <p className="mt-4 text-xs leading-relaxed text-rbx-dim">
-        Add the bot on Roblox, send a friend request, then confirm above. Join
-        Game unlocks in a later step.
-      </p>
+      {showFriend && showJoin && (
+        <p className="mt-4 text-xs leading-relaxed text-rbx-dim">
+          Add the bot on Roblox, send a friend request, confirm above, then join
+          the private server to complete your trade.
+        </p>
+      )}
     </Card>
   );
 }

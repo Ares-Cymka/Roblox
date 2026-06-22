@@ -41,6 +41,7 @@ export default async function AdminBotsPage() {
                   <th>Status</th>
                   <th>Max Jobs</th>
                   <th>Inventory</th>
+                  <th>Active Jobs</th>
                   <th>Updated</th>
                 </tr>
               </thead>
@@ -63,6 +64,7 @@ export default async function AdminBotsPage() {
                     </td>
                     <td>{bot.maxConcurrentDeliveries}</td>
                     <td>{bot._count.inventories}</td>
+                    <td>{bot.currentDeliveries}</td>
                     <td>{formatDate(bot.updatedAt)}</td>
                   </tr>
                 ))}
