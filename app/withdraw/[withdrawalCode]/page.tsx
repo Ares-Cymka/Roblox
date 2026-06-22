@@ -225,9 +225,20 @@ export default function WithdrawPage() {
       const json = await res.json();
       if (!res.ok) {
         const shortageText = Array.isArray(json.shortages)
-          ? json.shortages.map((e: { name: string; required: number; available: number }) => `${e.name}: need ${e.required}, bot has ${e.available}`).join("; ")
+          ? json.shortages
+              .map((e: { name: string; required: number; available: number }) =>
+                `${e.name}: need ${e.required}, available ${e.available}`)
+              .join("; ")
           : null;
-        setError(json.hint ?? (shortageText ? `${json.error ?? "Failed"} (${shortageText})` : json.error ?? "Failed to start delivery"));
+        // Build a user-friendly message
+        let msg: string;
+        if (json.error === "No bot available" || json.error === "Not enough bot inventory") {
+          msg = json.hint ?? "No delivery bot is currently available for your game. Please contact support or try again shortly.";
+          if (shortageText) msg += ` (${shortageText})`;
+        } else {
+          msg = json.hint ?? (shortageText ? `${json.error ?? "Failed"} (${shortageText})` : json.error ?? "Failed to start delivery");
+        }
+        setError(msg);
         return;
       }
       setData(json);
@@ -447,6 +458,11 @@ export default function WithdrawPage() {
             <p className="mb-4 text-sm text-rbx-muted">
               Username confirmed. Click below to be assigned a delivery bot from the queue.
             </p>
+            {error && (
+              <div className="mb-4">
+                <Alert variant="error">{error}</Alert>
+              </div>
+            )}
             <Button
               type="button"
               disabled={actionLoading}

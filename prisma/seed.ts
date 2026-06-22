@@ -124,8 +124,30 @@ async function main() {
       currentDeliveries: 0,
     },
   });
-
   console.log(`MM2 bot account ready: ${botAccount.robloxUsername} (${botAccount.status})`);
+
+  // Placeholder bots for SAB, ADOPT_ME, GAG2 (OFFLINE by default — admin sets ONLINE when ready)
+  const placeholderBots = [
+    { game: GameType.SAB, username: "rngblox_sab_bot" },
+    { game: GameType.ADOPT_ME, username: "rngblox_adoptme_bot" },
+    { game: GameType.GAG2, username: "rngblox_gag2_bot" },
+  ];
+
+  for (const pb of placeholderBots) {
+    await prisma.botAccount.upsert({
+      where: { game_robloxUsername: { game: pb.game, robloxUsername: pb.username } },
+      update: {},
+      create: {
+        game: pb.game,
+        robloxUsername: pb.username,
+        profileUrl: `https://www.roblox.com/users/search?keyword=${pb.username}`,
+        status: BotStatus.OFFLINE,
+        maxConcurrentDeliveries: 1,
+        currentDeliveries: 0,
+      },
+    });
+    console.log(`${pb.game} placeholder bot ready: ${pb.username} (OFFLINE — set ONLINE in admin when ready)`);
+  }
 
   await seedGameDeliveryConfigs();
 
