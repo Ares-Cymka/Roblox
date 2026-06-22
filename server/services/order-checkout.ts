@@ -274,6 +274,7 @@ export async function handleCheckoutSessionCompleted(session: {
   id: string;
   metadata?: Record<string, string> | null;
   payment_intent?: string | null;
+  customer?: string | null;
 }) {
   const orderId = session.metadata?.orderId;
   let order =
@@ -309,10 +310,56 @@ export async function handleCheckoutSessionCompleted(session: {
         typeof session.payment_intent === "string"
           ? session.payment_intent
           : order.stripePaymentIntentId,
+      stripeCustomerId:
+        typeof session.customer === "string" ? session.customer : order.stripeCustomerId,
+      paidAt: order.paidAt ?? new Date(),
     },
   });
 
   return creditOrderInventory(order.id);
+}
+
+export async function handleCheckoutSessionExpired(
+  stripeSessionId: string,
+  metadata: Record<string, string> | null
+) {
+  const orderId = metadata?.orderId ?? undefined;
+
+  const order = orderId
+    ? await prisma.order.findUnique({ where: { id: orderId } })
+    : await prisma.order.findUnique({ where: { stripeCheckoutSessionId: stripeSessionId } });
+
+  if (!order) return { ignored: true as const };
+  if (order.paymentStatus === PaymentStatus.PAID) return { ignored: true as const };
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      paymentStatus: PaymentStatus.FAILED,
+      status: OrderStatus.EXPIRED,
+    },
+  });
+
+  return { order, expired: true as const };
+}
+
+export async function handlePaymentIntentFailed(stripePaymentIntentId: string) {
+  const order = await prisma.order.findUnique({
+    where: { stripePaymentIntentId },
+  });
+
+  if (!order) return { ignored: true as const };
+  if (order.paymentStatus === PaymentStatus.PAID) return { ignored: true as const };
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      paymentStatus: PaymentStatus.FAILED,
+      status: OrderStatus.FAILED,
+    },
+  });
+
+  return { order, failed: true as const };
 }
 
 export async function getOrderById(orderId: string) {

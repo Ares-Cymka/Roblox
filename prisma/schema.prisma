@@ -259,6 +259,17 @@ model WithdrawalItem {
   @@index([productId])
 }
 
+model StripeEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  eventType     String
+  processedAt   DateTime @default(now())
+
+  @@index([stripeEventId])
+  @@index([eventType])
+  @@index([processedAt])
+}
+
 model Order {
   id                      String              @id @default(cuid())
   orderCode               String              @unique
@@ -270,8 +281,10 @@ model Order {
   sessionId               String?
   stripeCheckoutSessionId String?             @unique
   stripePaymentIntentId   String?             @unique
+  stripeCustomerId        String?
   totalAmount             Decimal?            @db.Decimal(12, 2)
   currency                String              @default("usd")
+  paidAt                  DateTime?
   createdAt               DateTime            @default(now())
   updatedAt               DateTime            @updatedAt
   items                   OrderItem[]
