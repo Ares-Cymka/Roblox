@@ -28,25 +28,43 @@ export async function POST(_request: Request, { params }: RouteParams) {
       );
     }
 
+    const defaultQuantity = 10;
+
     for (const product of products) {
-      await prisma.botInventory.upsert({
+      const existing = await prisma.botInventory.findUnique({
         where: {
           botAccountId_productId: {
             botAccountId: bot.id,
             productId: product.id,
           },
         },
-        create: {
+      });
+
+      if (existing) {
+        await prisma.botInventory.update({
+          where: { id: existing.id },
+          data: {
+            quantity:
+              existing.quantity === 0 ? defaultQuantity : existing.quantity,
+          },
+        });
+        continue;
+      }
+
+      await prisma.botInventory.create({
+        data: {
           botAccountId: bot.id,
           productId: product.id,
-          quantity: 0,
+          quantity: defaultQuantity,
           reservedQuantity: 0,
         },
-        update: {},
       });
     }
 
-    return NextResponse.json({ linked: products.length });
+    return NextResponse.json({
+      linked: products.length,
+      defaultQuantity,
+    });
   } catch {
     return NextResponse.json(
       { error: "Failed to sync catalog to bot inventory" },

@@ -35,7 +35,9 @@ export function SyncBotCatalogButton({
         return;
       }
 
-      setMessage(`Linked ${data.linked} product(s) from catalog.`);
+      setMessage(
+        `Synced ${data.linked} product(s). Zero-stock items were set to ${data.defaultQuantity ?? 10}.`
+      );
       router.refresh();
     } catch {
       setError("Network error. Please try again.");
