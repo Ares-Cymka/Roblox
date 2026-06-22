@@ -8,9 +8,9 @@ export const WITHDRAWAL_STATUS_MESSAGES: Record<string, string> = {
   PROCESSING: "Delivery is being processed.",
   DELIVERED: "Delivery completed. Thank you.",
   SUPPORT_REQUIRED:
-    "This withdrawal requires customer service review for fraud protection.",
+    "This withdrawal requires customer service review for fraud protection. Our team will review it before delivery. Please contact support if you need help.",
   FAILED: "Delivery failed. Please contact support or wait for retry.",
-  CANCELLED: "This withdrawal was cancelled.",
+  CANCELLED: "This withdrawal was cancelled. If you believe this is an error, please contact support.",
 };
 
 export function getWithdrawalStatusMessage(status: string): string | null {

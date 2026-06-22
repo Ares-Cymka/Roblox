@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { DeliveryJobDetailActions } from "@/components/admin/deliveries/DeliveryJobDetailActions";
+import { DeliveryProofForm } from "@/components/admin/deliveries/DeliveryProofForm";
 import { Card } from "@/components/ui/Card";
 import { Badge, statusToBadgeVariant } from "@/components/ui/Badge";
 import { getDeliveryJobDetail } from "@/server/services/admin-delivery";
@@ -181,6 +182,15 @@ export default async function AdminDeliveryDetailPage({
         />
       </Card>
 
+      {delivery.status === "DELIVERED" && (
+        <Card title="Delivery Proof" elevated>
+          <p className="mb-4 text-sm text-rbx-muted">
+            Optionally attach proof of delivery (trade screenshot URL, confirmation note, etc.).
+          </p>
+          <DeliveryProofForm deliveryJobId={delivery.id} />
+        </Card>
+      )}
+
       <Card title="Delivery Logs" elevated>
         {delivery.logs.length === 0 ? (
           <p className="text-sm text-rbx-muted">No logs yet.</p>
@@ -192,6 +202,21 @@ export default async function AdminDeliveryDetailPage({
                 className="rounded-rbx border border-rbx-border bg-rbx-panel px-4 py-3"
               >
                 <p className="text-sm text-rbx-text">{log.message}</p>
+                {"proofText" in log && log.proofText && (
+                  <p className="mt-1 text-xs font-semibold text-rbx-green">
+                    Proof: {log.proofText}
+                  </p>
+                )}
+                {"proofImageUrl" in log && log.proofImageUrl && (
+                  <a
+                    href={log.proofImageUrl as string}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 block text-xs text-rbx-blue hover:underline"
+                  >
+                    View proof image
+                  </a>
+                )}
                 <p className="mt-1 text-xs text-rbx-dim">{formatDate(log.createdAt)}</p>
               </li>
             ))}

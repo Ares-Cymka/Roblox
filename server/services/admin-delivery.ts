@@ -185,6 +185,8 @@ export async function formatDeliveryJobDetail(job: LoadedDeliveryJob) {
       id: log.id,
       level: log.level,
       message: log.message,
+      proofText: log.proofText ?? null,
+      proofImageUrl: log.proofImageUrl ?? null,
       createdAt: log.createdAt,
     })),
   };

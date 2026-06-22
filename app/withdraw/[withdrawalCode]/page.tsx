@@ -61,11 +61,11 @@ interface WithdrawalData {
   supportMessage: string | null;
 }
 
+// SUPPORT_REQUIRED is NOT terminal — it may be approved later, so we keep polling.
 const TERMINAL_STATUSES = new Set([
   "DELIVERED",
   "FAILED",
   "CANCELLED",
-  "SUPPORT_REQUIRED",
 ]);
 
 export default function WithdrawPage() {

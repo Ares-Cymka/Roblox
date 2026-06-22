@@ -123,6 +123,7 @@ model AdminUser {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   sessions     AdminSession[]
+  supportNotes SupportNote[]
 
   @@index([email])
 }
@@ -233,6 +234,7 @@ model Withdrawal {
   items           WithdrawalItem[]
   botAssignments  BotAssignment[]
   deliveryJob     DeliveryJob?
+  supportNotes    SupportNote[]
 
   @@index([customerId])
   @@index([sessionId])
@@ -451,6 +453,8 @@ model DeliveryLog {
   withdrawalId  String?
   level         LogLevel     @default(INFO)
   message       String
+  proofText     String?
+  proofImageUrl String?
   metadata      Json?
   createdAt     DateTime     @default(now())
 
@@ -458,6 +462,20 @@ model DeliveryLog {
   @@index([claimId])
   @@index([withdrawalId])
   @@index([level])
+  @@index([createdAt])
+}
+
+model SupportNote {
+  id           String     @id @default(cuid())
+  withdrawalId String
+  withdrawal   Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  adminUserId  String?
+  adminUser    AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  note         String
+  createdAt    DateTime   @default(now())
+
+  @@index([withdrawalId])
+  @@index([adminUserId])
   @@index([createdAt])
 }
 

@@ -16,6 +16,7 @@ const navItems = [
   { href: "/admin/bots", label: "Bots" },
   { href: "/admin/game-configs", label: "Game Configs" },
   { href: "/admin/deliveries", label: "Deliveries" },
+  { href: "/admin/support", label: "Support Review" },
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/settings", label: "Settings" },
 ];
