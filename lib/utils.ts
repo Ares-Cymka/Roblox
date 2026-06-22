@@ -21,3 +21,9 @@ export function generateClaimCode(): string {
 export function generateOrderCode(): string {
   return `ORD-${generateClaimCode()}`;
 }
+
+export function generateWithdrawalCode(): string {
+  return `WD-${generateClaimCode()}`;
+}
+
+export const FRAUD_REVIEW_THRESHOLD = 200;

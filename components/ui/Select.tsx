@@ -23,28 +23,28 @@ export function Select({
   const selectId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       {label && (
-        <label htmlFor={selectId} className="text-sm font-medium text-gray-700">
+        <label htmlFor={selectId} className="rbx-label">
           {label}
         </label>
       )}
       <select
         id={selectId}
         className={cn(
-          "rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-secondary/20",
-          error && "border-brand-warning",
+          "rounded-rbx border-2 border-rbx-border bg-rbx-bg px-4 py-2.5 text-sm font-medium text-rbx-text focus:border-rbx-blue focus:outline-none focus:ring-2 focus:ring-rbx-blue/25",
+          error && "border-rbx-red",
           className
         )}
         {...props}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} className="bg-rbx-surface">
             {option.label}
           </option>
         ))}
       </select>
-      {error && <p className="text-xs text-brand-warning">{error}</p>}
+      {error && <p className="text-xs font-semibold text-rbx-red">{error}</p>}
     </div>
   );
 }

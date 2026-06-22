@@ -15,6 +15,14 @@ enum GameType {
   OTHER
 }
 
+enum DeliveryMethod {
+  TRADING
+  GIFTING
+  MAILBOX
+  JOIN_BASED
+  MANUAL
+}
+
 enum OrderStatus {
   PENDING
   CLAIM_STARTED
@@ -38,6 +46,19 @@ enum ClaimStatus {
   FAILED
   CANCELLED
   EXPIRED
+}
+
+enum WithdrawalStatus {
+  PENDING
+  USERNAME_REQUIRED
+  QUEUED
+  WAITING_FRIEND_REQUEST
+  WAITING_JOIN
+  PROCESSING
+  DELIVERED
+  FAILED
+  CANCELLED
+  SUPPORT_REQUIRED
 }
 
 enum BotStatus {
@@ -103,52 +124,129 @@ model AdminSession {
 }
 
 model Customer {
-  id              String   @id @default(cuid())
-  email           String?  @unique
-  robloxUsername  String?
-  robloxUserId    String?
-  metadata        Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  orders          Order[]
-  claims          Claim[]
+  id               String              @id @default(cuid())
+  email            String?             @unique
+  robloxUsername   String?
+  robloxUserId     String?
+  testCode         String?             @unique
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  orders           Order[]
+  claims           Claim[]
+  inventories      CustomerInventory[]
+  withdrawals      Withdrawal[]
 
   @@index([robloxUsername])
   @@index([robloxUserId])
+  @@index([testCode])
 }
 
 model Product {
-  id             String          @id @default(cuid())
-  game           GameType
-  itemId         String
-  name           String
-  imageUrl       String?
-  rarity         String?
-  value          Decimal?        @db.Decimal(12, 2)
-  stock          Int             @default(0)
-  metadata       Json?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  orderItems     OrderItem[]
-  claimItems     ClaimItem[]
-  botInventories BotInventory[]
-  inventoryLogs  InventoryLog[]
+  id                 String              @id @default(cuid())
+  game               GameType
+  itemId             String
+  name               String
+  imageUrl           String?
+  rarity             String?
+  value              Decimal?            @db.Decimal(12, 2)
+  stock              Int                 @default(0)
+  metadata           Json?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  orderItems         OrderItem[]
+  claimItems         ClaimItem[]
+  botInventories     BotInventory[]
+  inventoryLogs      InventoryLog[]
+  customerInventories CustomerInventory[]
+  withdrawalItems    WithdrawalItem[]
 
   @@unique([game, itemId])
   @@index([game])
   @@index([name])
 }
 
+model GameDeliveryConfig {
+  id                        String         @id @default(cuid())
+  game                      GameType       @unique
+  deliveryMethod            DeliveryMethod
+  requiresFriend            Boolean        @default(false)
+  requiresPrivateServer       Boolean        @default(false)
+  requiresCustomerJoin      Boolean        @default(false)
+  requiresManualConfirmation Boolean       @default(true)
+  instructions              String?
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+}
+
+model CustomerInventory {
+  id                String    @id @default(cuid())
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sessionId         String?
+  productId         String
+  product           Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity          Int       @default(0)
+  reservedQuantity  Int       @default(0)
+  sourceOrderId     String?
+  sourceOrder       Order?    @relation(fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([sessionId])
+  @@index([productId])
+  @@index([sourceOrderId])
+}
+
+model Withdrawal {
+  id              String           @id @default(cuid())
+  withdrawalCode  String           @unique
+  customerId      String?
+  customer        Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  sessionId       String?
+  robloxUsername  String?
+  status          WithdrawalStatus @default(PENDING)
+  totalValue      Decimal          @db.Decimal(12, 2)
+  supportReason   String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  items           WithdrawalItem[]
+  botAssignments  BotAssignment[]
+  deliveryJob     DeliveryJob?
+
+  @@index([customerId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([robloxUsername])
+}
+
+model WithdrawalItem {
+  id           String     @id @default(cuid())
+  withdrawalId String
+  withdrawal   Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity     Int        @default(1)
+  unitValue    Decimal?   @db.Decimal(12, 2)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([withdrawalId])
+  @@index([productId])
+}
+
 model Order {
-  id         String      @id @default(cuid())
-  orderCode  String      @unique
-  status     OrderStatus @default(PENDING)
-  customerId String?
-  customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  items      OrderItem[]
-  claims     Claim[]
+  id                  String              @id @default(cuid())
+  orderCode           String              @unique
+  status              OrderStatus         @default(PENDING)
+  customerId          String?
+  customer            Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  items               OrderItem[]
+  claims              Claim[]
+  customerInventories CustomerInventory[]
 
   @@index([status])
   @@index([customerId])
@@ -156,15 +254,15 @@ model Order {
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity  Int      @default(1)
-  unitValue Decimal? @db.Decimal(12, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @default(cuid())
+  orderId    String
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity   Int         @default(1)
+  unitValue  Decimal?    @db.Decimal(12, 2)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   claimItems ClaimItem[]
 
   @@index([orderId])
@@ -235,16 +333,16 @@ model BotAccount {
 }
 
 model BotInventory {
-  id                String         @id @default(cuid())
-  botAccountId      String
-  botAccount        BotAccount     @relation(fields: [botAccountId], references: [id], onDelete: Cascade)
-  productId         String
-  product           Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity          Int            @default(0)
-  reservedQuantity  Int            @default(0)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  inventoryLogs     InventoryLog[]
+  id               String         @id @default(cuid())
+  botAccountId     String
+  botAccount       BotAccount     @relation(fields: [botAccountId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity         Int            @default(0)
+  reservedQuantity Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  inventoryLogs    InventoryLog[]
 
   @@unique([botAccountId, productId])
   @@index([botAccountId])
@@ -255,8 +353,10 @@ model BotAssignment {
   id            String              @id @default(cuid())
   botAccountId  String
   botAccount    BotAccount          @relation(fields: [botAccountId], references: [id], onDelete: Cascade)
-  claimId       String
-  claim         Claim               @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  claimId       String?
+  claim         Claim?              @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  withdrawalId  String?
+  withdrawal    Withdrawal?         @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
   status        BotAssignmentStatus @default(ASSIGNED)
   assignedAt    DateTime            @default(now())
   completedAt   DateTime?
@@ -266,21 +366,24 @@ model BotAssignment {
 
   @@index([botAccountId])
   @@index([claimId])
+  @@index([withdrawalId])
   @@index([status])
 }
 
 model DeliveryJob {
-  id          String         @id @default(cuid())
-  claimId     String         @unique
-  claim       Claim          @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  status      DeliveryStatus @default(QUEUED)
-  attempts    Int            @default(0)
-  lastError   String?
-  lockedAt    DateTime?
-  deliveredAt DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  logs        DeliveryLog[]
+  id           String         @id @default(cuid())
+  claimId      String?        @unique
+  claim        Claim?         @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  withdrawalId String?        @unique
+  withdrawal   Withdrawal?    @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  status       DeliveryStatus @default(QUEUED)
+  attempts     Int            @default(0)
+  lastError    String?
+  lockedAt     DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  logs         DeliveryLog[]
 
   @@index([status])
   @@index([createdAt])
@@ -288,33 +391,37 @@ model DeliveryJob {
 }
 
 model DeliveryLog {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   deliveryJobId String
-  deliveryJob   DeliveryJob @relation(fields: [deliveryJobId], references: [id], onDelete: Cascade)
-  level         LogLevel    @default(INFO)
+  deliveryJob   DeliveryJob  @relation(fields: [deliveryJobId], references: [id], onDelete: Cascade)
+  claimId       String?
+  withdrawalId  String?
+  level         LogLevel     @default(INFO)
   message       String
   metadata      Json?
-  createdAt     DateTime    @default(now())
+  createdAt     DateTime     @default(now())
 
   @@index([deliveryJobId])
+  @@index([claimId])
+  @@index([withdrawalId])
   @@index([level])
   @@index([createdAt])
 }
 
 model InventoryLog {
-  id              String        @id @default(cuid())
-  botInventoryId  String?
-  botInventory    BotInventory? @relation(fields: [botInventoryId], references: [id], onDelete: SetNull)
-  botAccountId    String
-  botAccount      BotAccount    @relation(fields: [botAccountId], references: [id], onDelete: Cascade)
-  productId       String
-  product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
-  delta           Int
-  quantityBefore  Int
-  quantityAfter   Int
-  reason          String
-  metadata        Json?
-  createdAt       DateTime      @default(now())
+  id             String        @id @default(cuid())
+  botInventoryId String?
+  botInventory   BotInventory? @relation(fields: [botInventoryId], references: [id], onDelete: SetNull)
+  botAccountId   String
+  botAccount     BotAccount    @relation(fields: [botAccountId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  delta          Int
+  quantityBefore Int
+  quantityAfter  Int
+  reason         String
+  metadata       Json?
+  createdAt      DateTime      @default(now())
 
   @@index([botInventoryId])
   @@index([botAccountId])
@@ -323,13 +430,13 @@ model InventoryLog {
 }
 
 model IdempotencyKey {
-  id           String    @id @default(cuid())
-  key          String    @unique
-  scope        String
-  requestHash  String?
-  response     Json?
-  expiresAt    DateTime
-  createdAt    DateTime  @default(now())
+  id          String   @id @default(cuid())
+  key         String   @unique
+  scope       String
+  requestHash String?
+  response    Json?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
 
   @@index([scope])
   @@index([expiresAt])

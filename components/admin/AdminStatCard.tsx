@@ -13,10 +13,10 @@ export function AdminStatCard({
   variant = "neutral",
 }: AdminStatCardProps) {
   return (
-    <Card className="text-center">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-gray-900">{value}</p>
-      <Badge variant={variant} className="mt-3">
+    <Card elevated className="text-center">
+      <p className="rbx-label">{label}</p>
+      <p className="mt-3 text-4xl font-extrabold text-rbx-text">{value}</p>
+      <Badge variant={variant} className="mt-4">
         {label}
       </Badge>
     </Card>

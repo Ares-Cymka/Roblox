@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { PageShell } from "@/components/layout/PageShell";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -139,7 +140,20 @@ export default function ClaimPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Failed to start claim");
+        const shortageText = Array.isArray(data.shortages)
+          ? data.shortages
+              .map(
+                (entry: { name: string; required: number; available: number }) =>
+                  `${entry.name}: need ${entry.required}, bot has ${entry.available}`
+              )
+              .join("; ")
+          : null;
+
+        setError(
+          shortageText
+            ? `${data.error ?? "Failed to start claim"} (${shortageText})`
+            : data.error ?? "Failed to start claim"
+        );
         return;
       }
 
@@ -168,17 +182,15 @@ export default function ClaimPage() {
     (result.claim.status === "USERNAME_LINKED" || result.claim.status === "PENDING");
 
   return (
-    <PageShell>
-      <div className="mx-auto max-w-lg space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Claim Delivery</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter your claim code, link your Roblox account, and start delivery.
-          </p>
-        </div>
+    <PageShell narrow>
+      <PageHeader
+        title="Claim Delivery"
+        description="Enter your claim code, link your Roblox account, and start delivery."
+      />
 
+      <div className="space-y-6">
         {step === "lookup" && (
-          <Card className="border-gray-200">
+          <Card elevated>
             <form onSubmit={handleLookup} className="space-y-4">
               <Input
                 label="Claim Code"
@@ -187,7 +199,7 @@ export default function ClaimPage() {
                 onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
                 required
               />
-              <Button type="submit" disabled={loading} className="w-full">
+              <Button type="submit" disabled={loading} className="w-full" size="lg">
                 {loading ? "Looking up..." : "Look Up Claim"}
               </Button>
             </form>
@@ -196,18 +208,22 @@ export default function ClaimPage() {
 
         {step === "active" && result && (
           <>
-            <Card title="Your Order" className="border-gray-200">
-              <dl className="space-y-3 text-sm">
+            <Card title="Your Order" elevated>
+              <dl className="space-y-3">
                 <div className="flex justify-between gap-4">
-                  <dt className="text-gray-500">Order Code</dt>
-                  <dd className="font-mono font-medium">{result.order.orderCode}</dd>
+                  <dt className="rbx-label">Order Code</dt>
+                  <dd className="font-mono text-sm font-bold text-rbx-text">
+                    {result.order.orderCode}
+                  </dd>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <dt className="text-gray-500">Claim Code</dt>
-                  <dd className="font-mono font-medium">{result.claim.claimCode}</dd>
+                  <dt className="rbx-label">Claim Code</dt>
+                  <dd className="font-mono text-sm font-bold text-rbx-text">
+                    {result.claim.claimCode}
+                  </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-gray-500">Status</dt>
+                  <dt className="rbx-label">Status</dt>
                   <dd>
                     <Badge variant={statusToBadgeVariant(result.claim.status)}>
                       {result.claim.status.replace(/_/g, " ")}
@@ -216,27 +232,24 @@ export default function ClaimPage() {
                 </div>
                 {result.claim.robloxUsername && (
                   <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500">Roblox Username</dt>
-                    <dd className="font-medium">{result.claim.robloxUsername}</dd>
+                    <dt className="rbx-label">Roblox Username</dt>
+                    <dd className="rbx-value">{result.claim.robloxUsername}</dd>
                   </div>
                 )}
               </dl>
 
-              <div className="mt-5 border-t border-gray-100 pt-4">
-                <p className="mb-3 text-sm font-medium text-gray-900">Items</p>
+              <div className="rbx-divider mt-5 pt-4">
+                <p className="mb-3 text-sm font-bold text-rbx-text">Items</p>
                 <ul className="space-y-2">
                   {result.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm"
-                    >
+                    <li key={item.id} className="rbx-list-row">
                       <span>
                         {item.name}
                         {item.rarity ? (
-                          <span className="text-gray-500"> · {item.rarity}</span>
+                          <span className="text-rbx-dim"> · {item.rarity}</span>
                         ) : null}
                       </span>
-                      <span className="font-medium">× {item.quantity}</span>
+                      <span className="font-bold text-rbx-green">x {item.quantity}</span>
                     </li>
                   ))}
                 </ul>
@@ -244,7 +257,7 @@ export default function ClaimPage() {
             </Card>
 
             {!usernameLinked && (
-              <Card title="Link Roblox Account" className="border-gray-200">
+              <Card title="Link Roblox Account" elevated>
                 <form onSubmit={handleContinue} className="space-y-4">
                   <Input
                     label="Roblox Username"
@@ -254,7 +267,7 @@ export default function ClaimPage() {
                     required
                     autoComplete="username"
                   />
-                  <Button type="submit" disabled={loading} className="w-full">
+                  <Button type="submit" disabled={loading} className="w-full" size="lg">
                     {loading ? "Saving..." : "Continue"}
                   </Button>
                 </form>
@@ -262,8 +275,8 @@ export default function ClaimPage() {
             )}
 
             {usernameLinked && !claimStarted && (
-              <Card title="Start Delivery" className="border-gray-200">
-                <p className="mb-4 text-sm text-gray-600">
+              <Card title="Start Delivery" elevated>
+                <p className="mb-4 text-sm text-rbx-muted">
                   Your Roblox username is linked. Start the claim to assign a delivery bot.
                 </p>
                 {canStartClaim && (
@@ -271,7 +284,8 @@ export default function ClaimPage() {
                     type="button"
                     disabled={loading}
                     onClick={handleStartClaim}
-                    className="w-full bg-brand-primary hover:bg-brand-primary-hover"
+                    className="w-full"
+                    size="lg"
                   >
                     {loading ? "Starting..." : "Start Claim"}
                   </Button>
@@ -281,7 +295,7 @@ export default function ClaimPage() {
 
             {result.assignment && <BotAssignmentCard assignment={result.assignment} />}
 
-            <Button type="button" variant="ghost" className="w-full" onClick={resetFlow}>
+            <Button type="button" variant="outline" className="w-full" onClick={resetFlow}>
               Start Over
             </Button>
           </>

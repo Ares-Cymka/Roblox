@@ -5,6 +5,7 @@ import { BotAccountForm } from "@/components/admin/bots/BotAccountForm";
 import { BotInventoryManager } from "@/components/admin/bots/BotInventoryManager";
 import { BotInventoryTable } from "@/components/admin/bots/BotInventoryTable";
 import { SyncBotCatalogButton } from "@/components/admin/bots/SyncBotCatalogButton";
+import { FillTestStockButton } from "@/components/admin/bots/FillTestStockButton";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -110,7 +111,10 @@ export default async function BotDetailPage({ params }: BotDetailPageProps) {
 
       <BotInventoryManager botId={bot.id} game={bot.game} products={products} />
 
-      <SyncBotCatalogButton botId={bot.id} productCount={products.length} />
+      <div className="flex flex-wrap items-start gap-6">
+        <SyncBotCatalogButton botId={bot.id} productCount={products.length} />
+        <FillTestStockButton botId={bot.id} />
+      </div>
 
       <Card
         title="In-game inventory"

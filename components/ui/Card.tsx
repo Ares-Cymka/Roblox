@@ -6,23 +6,31 @@ interface CardProps {
   className?: string;
   title?: string;
   description?: string;
+  elevated?: boolean;
 }
 
-export function Card({ children, className, title, description }: CardProps) {
+export function Card({
+  children,
+  className,
+  title,
+  description,
+  elevated = false,
+}: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/60 bg-white p-6 shadow-md",
+        elevated ? "rbx-panel-elevated" : "rbx-panel",
+        "p-6",
         className
       )}
     >
       {(title || description) && (
-        <div className="mb-4">
+        <div className="mb-5">
           {title && (
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <h2 className="text-lg font-bold text-rbx-text">{title}</h2>
           )}
           {description && (
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
+            <p className="mt-1 text-sm text-rbx-muted">{description}</p>
           )}
         </div>
       )}

@@ -38,6 +38,7 @@ export default async function AdminDashboardPage() {
       <Card
         title="Quick links"
         description="Jump to common admin sections."
+        elevated
       >
         <ul className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           {[
@@ -49,7 +50,7 @@ export default async function AdminDashboardPage() {
             <li key={href}>
               <a
                 href={href}
-                className="font-medium text-brand-secondary hover:underline"
+                className="font-semibold text-rbx-blue hover:underline"
               >
                 {label}
               </a>

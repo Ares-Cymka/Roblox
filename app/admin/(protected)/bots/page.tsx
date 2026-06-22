@@ -33,37 +33,37 @@ export default async function AdminBotsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="rbx-table">
               <thead>
-                <tr className="border-b border-gray-100 text-gray-500">
-                  <th className="pb-2 pr-4 font-medium">Username</th>
-                  <th className="pb-2 pr-4 font-medium">Game</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 pr-4 font-medium">Max Jobs</th>
-                  <th className="pb-2 pr-4 font-medium">Inventory</th>
-                  <th className="pb-2 font-medium">Updated</th>
+                <tr>
+                  <th>Username</th>
+                  <th>Game</th>
+                  <th>Status</th>
+                  <th>Max Jobs</th>
+                  <th>Inventory</th>
+                  <th>Updated</th>
                 </tr>
               </thead>
               <tbody>
                 {bots.map((bot) => (
-                  <tr key={bot.id} className="border-b border-gray-50">
-                    <td className="py-3 pr-4">
+                  <tr key={bot.id}>
+                    <td className="font-semibold text-rbx-text">
                       <Link
                         href={`/admin/bots/${bot.id}`}
-                        className="font-medium text-brand-secondary hover:underline"
+                        className="text-rbx-blue hover:underline"
                       >
                         {bot.robloxUsername}
                       </Link>
                     </td>
-                    <td className="py-3 pr-4">{bot.game}</td>
-                    <td className="py-3 pr-4">
+                    <td>{bot.game}</td>
+                    <td>
                       <Badge variant={botStatusToBadgeVariant(bot.status)}>
                         {bot.status}
                       </Badge>
                     </td>
-                    <td className="py-3 pr-4">{bot.maxConcurrentDeliveries}</td>
-                    <td className="py-3 pr-4">{bot._count.inventories}</td>
-                    <td className="py-3 text-gray-500">{formatDate(bot.updatedAt)}</td>
+                    <td>{bot.maxConcurrentDeliveries}</td>
+                    <td>{bot._count.inventories}</td>
+                    <td>{formatDate(bot.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -169,3 +169,32 @@ export async function deleteBotInventoryItem(botAccountId: string, inventoryId: 
 
   return prisma.botInventory.delete({ where: { id: inventoryId } });
 }
+
+export async function fillBotTestStock(botAccountId: string, minQuantity = 10) {
+  const bot = await prisma.botAccount.findUnique({
+    where: { id: botAccountId },
+    include: { inventories: true },
+  });
+
+  if (!bot) return { error: "Bot not found" as const };
+
+  let updated = 0;
+
+  for (const inventory of bot.inventories) {
+    const nextQuantity = Math.max(
+      inventory.quantity,
+      minQuantity,
+      inventory.reservedQuantity
+    );
+
+    if (nextQuantity === inventory.quantity) continue;
+
+    await prisma.botInventory.update({
+      where: { id: inventory.id },
+      data: { quantity: nextQuantity },
+    });
+    updated++;
+  }
+
+  return { updated, total: bot.inventories.length, minQuantity };
+}

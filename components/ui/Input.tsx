@@ -10,22 +10,22 @@ export function Input({ label, error, className, id, ...props }: InputProps) {
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       {label && (
-        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className="rbx-label">
           {label}
         </label>
       )}
       <input
         id={inputId}
         className={cn(
-          "rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-secondary/20",
-          error && "border-brand-warning focus:border-brand-warning focus:ring-brand-warning/20",
+          "rounded-rbx border-2 border-rbx-border bg-rbx-bg px-4 py-2.5 text-sm font-medium text-rbx-text placeholder:text-rbx-dim focus:border-rbx-blue focus:outline-none focus:ring-2 focus:ring-rbx-blue/25",
+          error && "border-rbx-red focus:border-rbx-red focus:ring-rbx-red/25",
           className
         )}
         {...props}
       />
-      {error && <p className="text-xs text-brand-warning">{error}</p>}
+      {error && <p className="text-xs font-semibold text-rbx-red">{error}</p>}
     </div>
   );
 }

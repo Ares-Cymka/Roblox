@@ -9,18 +9,18 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  success: "bg-green-100 text-brand-success",
-  warning: "bg-red-100 text-brand-warning",
-  neutral: "bg-gray-100 text-gray-600",
-  info: "bg-blue-100 text-brand-secondary",
-  pending: "bg-yellow-100 text-yellow-800",
+  success: "border-rbx-green/50 bg-rbx-green/15 text-green-300",
+  warning: "border-rbx-red/50 bg-rbx-red/15 text-red-300",
+  neutral: "border-rbx-border bg-rbx-elevated text-rbx-muted",
+  info: "border-rbx-blue/50 bg-rbx-blue/15 text-blue-200",
+  pending: "border-rbx-yellow/50 bg-rbx-yellow/15 text-yellow-200",
 };
 
 export function Badge({ children, variant = "neutral", className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",
         variantStyles[variant],
         className
       )}
@@ -30,9 +30,7 @@ export function Badge({ children, variant = "neutral", className }: BadgeProps) 
   );
 }
 
-export function statusToBadgeVariant(
-  status: string
-): BadgeVariant {
+export function statusToBadgeVariant(status: string): BadgeVariant {
   switch (status) {
     case "DELIVERED":
     case "COMPLETED":
@@ -40,6 +38,7 @@ export function statusToBadgeVariant(
     case "FAILED":
     case "CANCELLED":
     case "EXPIRED":
+    case "SUPPORT_REQUIRED":
       return "warning";
     case "PROCESSING":
     case "WAITING_USER":
@@ -50,6 +49,7 @@ export function statusToBadgeVariant(
     case "FRIEND_REQUEST_PENDING":
     case "PENDING":
     case "USERNAME_LINKED":
+    case "USERNAME_REQUIRED":
       return "pending";
     default:
       return "neutral";

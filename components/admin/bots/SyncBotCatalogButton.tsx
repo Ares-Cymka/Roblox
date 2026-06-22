@@ -59,7 +59,7 @@ export function SyncBotCatalogButton({
       {productCount === 0 && (
         <p className="text-xs text-gray-500">Import products for this game first.</p>
       )}
-      {message && <p className="text-sm text-brand-success">{message}</p>}
+      {message && <p className="text-sm font-semibold text-rbx-green">{message}</p>}
       {error && <Alert>{error}</Alert>}
     </div>
   );

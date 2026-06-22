@@ -3,7 +3,73 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
-    @apply text-gray-900;
+    @apply bg-rbx-bg text-rbx-text antialiased;
+  }
+
+  ::selection {
+    @apply bg-rbx-blue/30 text-white;
+  }
+}
+
+@layer components {
+  .rbx-panel {
+    @apply rounded-rbx border border-rbx-border bg-rbx-surface shadow-rbx-card;
+  }
+
+  .rbx-panel-elevated {
+    @apply rounded-rbx border border-rbx-border bg-rbx-elevated shadow-rbx-card;
+  }
+
+  .rbx-divider {
+    @apply border-t border-rbx-border;
+  }
+
+  .rbx-label {
+    @apply text-xs font-bold uppercase tracking-wide text-rbx-muted;
+  }
+
+  .rbx-value {
+    @apply text-sm font-semibold text-rbx-text;
+  }
+
+  .rbx-list-row {
+    @apply flex items-center justify-between rounded-rbx border border-rbx-border bg-rbx-bg px-4 py-3 text-sm;
+  }
+
+  .rbx-nav-link {
+    @apply rounded-rbx px-3 py-2 text-sm font-semibold text-rbx-muted transition-colors hover:bg-rbx-elevated hover:text-rbx-text;
+  }
+
+  .rbx-nav-link-active {
+    @apply bg-rbx-elevated text-rbx-text;
+  }
+
+  .rbx-table {
+    @apply w-full text-left text-sm;
+  }
+
+  .rbx-table thead tr {
+    @apply border-b border-rbx-border text-xs uppercase tracking-wide text-rbx-dim;
+  }
+
+  .rbx-table tbody tr {
+    @apply border-b border-rbx-border/50 transition-colors hover:bg-rbx-elevated/40;
+  }
+
+  .rbx-table th {
+    @apply pb-3 pr-4 font-bold;
+  }
+
+  .rbx-table td {
+    @apply py-3 pr-4 text-rbx-muted;
+  }
+
+  .rbx-textarea {
+    @apply min-h-32 w-full rounded-rbx border-2 border-rbx-border bg-rbx-bg px-4 py-3 text-sm text-rbx-text placeholder:text-rbx-dim focus:border-rbx-blue focus:outline-none focus:ring-2 focus:ring-rbx-blue/25;
   }
 }
