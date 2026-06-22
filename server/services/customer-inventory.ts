@@ -11,11 +11,13 @@ export function getCustomerInventoryAvailable(
 export async function lookupCustomerInventory(params: {
   sessionId?: string;
   testCode?: string;
+  email?: string;
 }) {
   const sessionId = params.sessionId?.trim();
   const testCode = params.testCode?.trim().toUpperCase();
+  const email = params.email?.trim().toLowerCase();
 
-  if (!sessionId && !testCode) {
+  if (!sessionId && !testCode && !email) {
     return null;
   }
 
@@ -24,13 +26,17 @@ export async function lookupCustomerInventory(params: {
     const customer = await prisma.customer.findUnique({ where: { testCode } });
     if (!customer) return null;
     customerId = customer.id;
+  } else if (email) {
+    const customer = await prisma.customer.findUnique({ where: { email } });
+    if (!customer) return null;
+    customerId = customer.id;
   }
 
   const inventories = await prisma.customerInventory.findMany({
     where: customerId
       ? { customerId }
       : { sessionId },
-    include: { product: true },
+    include: { product: true, sourceOrder: { select: { orderCode: true } } },
     orderBy: { updatedAt: "desc" },
   });
 
@@ -38,6 +44,7 @@ export async function lookupCustomerInventory(params: {
     customerId,
     sessionId: customerId ? undefined : sessionId,
     testCode: testCode ?? null,
+    email: email ?? null,
     items: inventories.map((entry) => ({
       id: entry.id,
       productId: entry.productId,
@@ -50,6 +57,7 @@ export async function lookupCustomerInventory(params: {
         entry.quantity,
         entry.reservedQuantity
       ),
+      sourceOrderCode: entry.sourceOrder?.orderCode ?? null,
     })),
   };
 }

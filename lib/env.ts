@@ -19,6 +19,9 @@ const envSchema = z.object({
   ADMIN_PASSWORD: z.string().min(8),
   SESSION_SECRET: z.string().min(32),
   APP_URL: z.string().url(),
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1).optional(),
   DELIVERY_ADAPTER: z.enum(["mock"]).default("mock"),
   DELIVERY_CONCURRENCY: z.coerce.number().int().positive().default(5),
 });

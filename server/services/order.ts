@@ -202,10 +202,13 @@ export async function createTestOrder(input: CreateTestOrderInput) {
         items: {
           create: input.items.map((item) => {
             const product = productById.get(item.productId)!;
+            const unitPrice = product.value ? Number(product.value) : null;
             return {
               productId: product.id,
               quantity: item.quantity,
               unitValue: product.value,
+              unitPrice,
+              totalPrice: unitPrice !== null ? unitPrice * item.quantity : null,
             };
           }),
         },

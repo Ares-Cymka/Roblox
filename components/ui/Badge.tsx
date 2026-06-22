@@ -32,8 +32,8 @@ export function Badge({ children, variant = "neutral", className }: BadgeProps) 
 
 export function statusToBadgeVariant(status: string): BadgeVariant {
   switch (status) {
-    case "DELIVERED":
-    case "COMPLETED":
+    case "PAID":
+    case "INVENTORY_CREDITED":
       return "success";
     case "FAILED":
     case "CANCELLED":

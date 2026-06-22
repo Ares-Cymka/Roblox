@@ -4,9 +4,10 @@ export const inventoryLookupSchema = z
   .object({
     sessionId: z.string().trim().min(1).optional(),
     testCode: z.string().trim().min(1).optional(),
+    email: z.string().email().optional(),
   })
-  .refine((value) => value.sessionId || value.testCode, {
-    message: "sessionId or testCode is required",
+  .refine((value) => value.sessionId || value.testCode || value.email, {
+    message: "sessionId, testCode, or email is required",
   });
 
 export const createWithdrawalSchema = z.object({

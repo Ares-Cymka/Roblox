@@ -7,9 +7,12 @@ import {
 import { FRAUD_REVIEW_THRESHOLD } from "@/lib/utils";
 
 describe("withdrawal validators", () => {
-  it("requires sessionId or testCode for inventory lookup", () => {
+  it("requires sessionId, testCode, or email for inventory lookup", () => {
     expect(inventoryLookupSchema.safeParse({}).success).toBe(false);
     expect(inventoryLookupSchema.safeParse({ testCode: "TESTPLAYER" }).success).toBe(true);
+    expect(
+      inventoryLookupSchema.safeParse({ email: "buyer@example.com" }).success
+    ).toBe(true);
   });
 
   it("accepts withdrawal creation payload", () => {

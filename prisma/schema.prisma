@@ -25,6 +25,8 @@ enum DeliveryMethod {
 
 enum OrderStatus {
   PENDING
+  PAID
+  INVENTORY_CREDITED
   CLAIM_STARTED
   QUEUED
   PROCESSING
@@ -32,6 +34,21 @@ enum OrderStatus {
   FAILED
   CANCELLED
   EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum CustomerInventoryLogReason {
+  ORDER_PAID
+  WITHDRAW_RESERVED
+  WITHDRAW_DELIVERED
+  WITHDRAW_CANCELLED
+  ADMIN_ADJUSTMENT
 }
 
 enum ClaimStatus {
@@ -136,6 +153,7 @@ model Customer {
   claims           Claim[]
   inventories      CustomerInventory[]
   withdrawals      Withdrawal[]
+  inventoryLogs    CustomerInventoryLog[]
 
   @@index([robloxUsername])
   @@index([robloxUserId])
@@ -160,6 +178,7 @@ model Product {
   inventoryLogs      InventoryLog[]
   customerInventories CustomerInventory[]
   withdrawalItems    WithdrawalItem[]
+  customerInventoryLogs CustomerInventoryLog[]
 
   @@unique([game, itemId])
   @@index([game])
@@ -237,19 +256,30 @@ model WithdrawalItem {
 }
 
 model Order {
-  id                  String              @id @default(cuid())
-  orderCode           String              @unique
-  status              OrderStatus         @default(PENDING)
-  customerId          String?
-  customer            Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  items               OrderItem[]
-  claims              Claim[]
-  customerInventories CustomerInventory[]
+  id                      String              @id @default(cuid())
+  orderCode               String              @unique
+  status                  OrderStatus         @default(PENDING)
+  paymentStatus           PaymentStatus       @default(PENDING)
+  customerId              String?
+  customer                Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerEmail           String?
+  sessionId               String?
+  stripeCheckoutSessionId String?             @unique
+  stripePaymentIntentId   String?             @unique
+  totalAmount             Decimal?            @db.Decimal(12, 2)
+  currency                String              @default("usd")
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  items                   OrderItem[]
+  claims                  Claim[]
+  customerInventories     CustomerInventory[]
+  customerInventoryLogs   CustomerInventoryLog[]
 
   @@index([status])
+  @@index([paymentStatus])
   @@index([customerId])
+  @@index([customerEmail])
+  @@index([sessionId])
   @@index([createdAt])
 }
 
@@ -261,12 +291,35 @@ model OrderItem {
   product    Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantity   Int         @default(1)
   unitValue  Decimal?    @db.Decimal(12, 2)
+  unitPrice  Decimal?    @db.Decimal(12, 2)
+  totalPrice Decimal?    @db.Decimal(12, 2)
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   claimItems ClaimItem[]
 
   @@index([orderId])
   @@index([productId])
+}
+
+model CustomerInventoryLog {
+  id         String                     @id @default(cuid())
+  customerId String?
+  customer   Customer?                  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  sessionId  String?
+  productId  String
+  product    Product                    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  orderId    String?
+  order      Order?                     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  delta      Int
+  reason     CustomerInventoryLogReason
+  createdAt  DateTime                   @default(now())
+
+  @@index([customerId])
+  @@index([sessionId])
+  @@index([productId])
+  @@index([orderId])
+  @@index([reason])
+  @@index([createdAt])
 }
 
 model Claim {

@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get("sessionId") ?? undefined;
   const testCode = request.nextUrl.searchParams.get("testCode") ?? undefined;
+  const email = request.nextUrl.searchParams.get("email") ?? undefined;
 
-  const parsed = inventoryLookupSchema.safeParse({ sessionId, testCode });
+  const parsed = inventoryLookupSchema.safeParse({ sessionId, testCode, email });
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Invalid lookup" },
