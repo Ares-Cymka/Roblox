@@ -1,8 +1,7 @@
 import bcrypt from "bcrypt";
 
 /**
- * Utility for hashing passwords (e.g. seed scripts).
- * Admin login compares against ADMIN_PASSWORD from env at runtime.
+ * Password hashing utilities for AdminUser records.
  */
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 10);

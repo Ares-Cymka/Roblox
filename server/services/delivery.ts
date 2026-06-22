@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { generateClaimCode } from "@/lib/utils";
 import type { CreateDeliveryInput } from "@/server/validators/delivery";
-import { comparePassword } from "@/lib/auth";
 import { DeliveryStatus, GameType } from "@prisma/client";
 
 export async function createDelivery(input: CreateDeliveryInput) {
@@ -141,53 +140,4 @@ export async function getDeliveryStats() {
   ]);
 
   return { total, pending: queued, processing, completed: delivered, failed };
-}
-
-export async function verifyAdminCredentials(
-  email: string,
-  password: string
-): Promise<boolean> {
-  const adminUser = await prisma.adminUser.findUnique({ where: { email } });
-  if (!adminUser?.isActive) return false;
-  return comparePassword(password, adminUser.passwordHash);
-}
-
-export async function createAdminSession(adminUserId?: string): Promise<string> {
-  const crypto = await import("crypto");
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-  let resolvedAdminUserId = adminUserId;
-  if (!resolvedAdminUserId) {
-    const { getEnv } = await import("@/lib/env");
-    const env = getEnv();
-    const adminUser = await prisma.adminUser.findUnique({
-      where: { email: env.ADMIN_EMAIL },
-    });
-    resolvedAdminUserId = adminUser?.id;
-  }
-
-  await prisma.adminSession.create({
-    data: {
-      token,
-      expiresAt,
-      adminUserId: resolvedAdminUserId,
-    },
-  });
-
-  return token;
-}
-
-export async function validateAdminSession(token: string): Promise<boolean> {
-  const session = await prisma.adminSession.findUnique({ where: { token } });
-  if (!session) return false;
-  if (session.expiresAt < new Date()) {
-    await prisma.adminSession.delete({ where: { id: session.id } });
-    return false;
-  }
-  return true;
-}
-
-export async function revokeAdminSession(token: string): Promise<void> {
-  await prisma.adminSession.deleteMany({ where: { token } });
 }

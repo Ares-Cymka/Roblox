@@ -4,7 +4,11 @@ import { adminLoginSchema } from "@/server/validators/delivery";
 import {
   verifyAdminCredentials,
   createAdminSession,
-} from "@/server/services/delivery";
+} from "@/server/services/auth";
+import {
+  ADMIN_SESSION_COOKIE,
+  getAdminSessionCookieOptions,
+} from "@/lib/admin-session";
 
 export const dynamic = "force-dynamic";
 
@@ -25,31 +29,25 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const valid = await verifyAdminCredentials(
-      parsed.data.email,
+    const result = await verifyAdminCredentials(
+      parsed.data.email.trim().toLowerCase(),
       parsed.data.password
     );
 
-    if (!valid) {
+    if (!result.valid || !result.adminUserId) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       );
     }
 
-    const adminUser = await prisma.adminUser.findUnique({
-      where: { email: parsed.data.email },
-    });
-
-    const token = await createAdminSession(adminUser?.id);
+    const signedCookie = await createAdminSession(result.adminUserId);
     const response = NextResponse.json({ success: true });
-    response.cookies.set("admin_session", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 24 * 60 * 60,
-    });
+    response.cookies.set(
+      ADMIN_SESSION_COOKIE,
+      signedCookie,
+      getAdminSessionCookieOptions()
+    );
 
     return response;
   } catch {
