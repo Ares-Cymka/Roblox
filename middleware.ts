@@ -3,17 +3,19 @@ import type { NextRequest } from "next/server";
 import {
   ADMIN_SESSION_COOKIE,
   getClearAdminSessionCookieOptions,
-  verifySignedSessionCookie,
 } from "@/lib/admin-session";
+import { verifySignedSessionCookieEdge } from "@/lib/admin-session-edge";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isLoginPage = pathname === "/admin/login";
-  const isLoginApi = pathname === "/api/admin/login";
-  const isProtectedAdminPage = pathname.startsWith("/admin") && !isLoginPage;
-  const isProtectedAdminApi =
-    pathname.startsWith("/api/admin") && !isLoginApi;
+  // Never run auth middleware on the login page or login API.
+  if (pathname === "/admin/login" || pathname === "/api/admin/login") {
+    return NextResponse.next();
+  }
+
+  const isProtectedAdminPage = pathname.startsWith("/admin");
+  const isProtectedAdminApi = pathname.startsWith("/api/admin");
 
   if (!isProtectedAdminPage && !isProtectedAdminApi) {
     return NextResponse.next();
@@ -21,7 +23,7 @@ export function middleware(request: NextRequest) {
 
   const signedCookie = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   const hasValidSignature = Boolean(
-    signedCookie && verifySignedSessionCookie(signedCookie)
+    signedCookie && (await verifySignedSessionCookieEdge(signedCookie))
   );
 
   if (!hasValidSignature) {
@@ -30,9 +32,7 @@ export function middleware(request: NextRequest) {
     }
 
     const loginUrl = new URL("/admin/login", request.url);
-    if (pathname !== "/admin") {
-      loginUrl.searchParams.set("from", pathname);
-    }
+    loginUrl.searchParams.set("from", pathname);
 
     const response = NextResponse.redirect(loginUrl);
     if (signedCookie) {

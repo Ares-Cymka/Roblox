@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { revokeAdminSession } from "@/server/services/auth";
 import {
@@ -8,7 +8,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const cookieStore = cookies();
   const signedCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
 
@@ -20,7 +20,11 @@ export async function POST() {
     }
   }
 
-  const response = NextResponse.json({ success: true });
+  const response = NextResponse.redirect(
+    new URL("/admin/login", request.url),
+    303
+  );
+
   response.cookies.set(
     ADMIN_SESSION_COOKIE,
     "",

@@ -11,6 +11,15 @@ function getSessionSecret(): string {
   return secret;
 }
 
+function safeEqualStrings(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 export function signSessionCookie(token: string): string {
   const signature = crypto
     .createHmac("sha256", getSessionSecret())
@@ -34,10 +43,7 @@ export function verifySignedSessionCookie(signedValue: string): string | null {
       .update(token)
       .digest("hex");
 
-    if (
-      signature.length !== expected.length ||
-      !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-    ) {
+    if (!safeEqualStrings(signature, expected)) {
       return null;
     }
 

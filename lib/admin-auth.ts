@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import {
   ADMIN_SESSION_COOKIE,
   getClearAdminSessionCookieOptions,
+  verifySignedSessionCookie,
 } from "@/lib/admin-session";
 import { validateAdminSession } from "@/server/services/auth";
 
@@ -11,13 +12,24 @@ export async function requireAdminSession(): Promise<void> {
   const signedCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
 
   if (!signedCookie) {
-    redirect("/admin/login");
+    redirect("/admin/login?from=/admin");
   }
 
-  const valid = await validateAdminSession(signedCookie);
-  if (!valid) {
+  const token = verifySignedSessionCookie(signedCookie);
+  if (!token) {
     cookieStore.set(ADMIN_SESSION_COOKIE, "", getClearAdminSessionCookieOptions());
-    redirect("/admin/login");
+    redirect("/admin/login?error=Invalid+session.+Please+sign+in+again.");
+  }
+
+  try {
+    const valid = await validateAdminSession(signedCookie);
+    if (!valid) {
+      cookieStore.set(ADMIN_SESSION_COOKIE, "", getClearAdminSessionCookieOptions());
+      redirect("/admin/login?error=Session+expired.+Please+sign+in+again.");
+    }
+  } catch {
+    cookieStore.set(ADMIN_SESSION_COOKIE, "", getClearAdminSessionCookieOptions());
+    redirect("/admin/login?error=Database+unavailable.+Try+again+in+a+moment.");
   }
 }
 
@@ -28,5 +40,10 @@ export async function getAdminSessionCookieValue(): Promise<string | undefined> 
 export async function isAdminAuthenticated(): Promise<boolean> {
   const signedCookie = await getAdminSessionCookieValue();
   if (!signedCookie) return false;
-  return validateAdminSession(signedCookie);
+  if (!verifySignedSessionCookie(signedCookie)) return false;
+  try {
+    return validateAdminSession(signedCookie);
+  } catch {
+    return false;
+  }
 }
