@@ -4,12 +4,12 @@ export const WITHDRAWAL_STATUS_MESSAGES: Record<string, string> = {
   WAITING_FRIEND_REQUEST: "Please add the delivery bot as a friend.",
   WAITING_JOIN:
     "Friend request marked as sent. Please join the private server.",
-  QUEUED: "Delivery is queued.",
+  QUEUED: "Delivery is queued. Please wait while our team completes the transfer.",
   PROCESSING: "Delivery is being processed.",
-  DELIVERED: "Delivery completed.",
+  DELIVERED: "Delivery completed. Thank you.",
   SUPPORT_REQUIRED:
     "This withdrawal requires customer service review for fraud protection.",
-  FAILED: "Delivery failed. Please contact support.",
+  FAILED: "Delivery failed. Please contact support or wait for retry.",
   CANCELLED: "This withdrawal was cancelled.",
 };
 

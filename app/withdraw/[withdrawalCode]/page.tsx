@@ -304,9 +304,11 @@ export default function WithdrawPage() {
   const statusBannerVariant =
     data.withdrawal.status === "DELIVERED"
       ? "success"
-      : isSupportRequired
+      : data.withdrawal.status === "FAILED"
         ? "warning"
-        : "info";
+        : isSupportRequired
+          ? "warning"
+          : "info";
 
   return (
     <PageShell narrow>

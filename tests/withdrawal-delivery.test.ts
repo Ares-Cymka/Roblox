@@ -11,7 +11,9 @@ import { botAssignmentActionSchema } from "@/server/validators/withdrawal";
 describe("withdrawal status helpers", () => {
   it("returns status messages", () => {
     expect(getWithdrawalStatusMessage("WAITING_FRIEND_REQUEST")).toContain("friend");
-    expect(getWithdrawalStatusMessage("DELIVERED")).toContain("completed");
+    expect(getWithdrawalStatusMessage("DELIVERED")).toContain("Thank you");
+    expect(getWithdrawalStatusMessage("QUEUED")).toContain("our team");
+    expect(getWithdrawalStatusMessage("FAILED")).toContain("contact support");
   });
 
   it("uses trading steps by default", () => {

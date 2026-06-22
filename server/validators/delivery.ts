@@ -20,3 +20,13 @@ export const createDeliverySchema = z.object({
 });
 
 export type CreateDeliveryInput = z.infer<typeof createDeliverySchema>;
+
+export const markDeliveryFailedSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Failure reason must be at least 3 characters")
+    .max(500),
+});
+
+export type MarkDeliveryFailedInput = z.infer<typeof markDeliveryFailedSchema>;
