@@ -17,3 +17,7 @@ export function generateClaimCode(): string {
   }
   return code;
 }
+
+export function generateOrderCode(): string {
+  return `ORD-${generateClaimCode()}`;
+}
