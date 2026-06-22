@@ -1,0 +1,40 @@
+id,name,rarity,value,img,boxes
+1,$10 Voucher,rare,10,/voucher-10.png,mm2-budget
+8,Alien Beam,epic,60,/mm2-alien-beam.webp,mm2-alien
+9,Alien Set,epic,90,/mm2-alien-set.webp,mm2-alien
+15,Batwing,uncommon,5,/mm2-batwing.webp,mm2-halloween
+22,Celestial,divine,150,/mm2-celestial.webp,sub-mm2
+30,Chroma Alien Beam,secret,650,/mm2-chroma-alien-beam.webp,mm2-alien mm2-budget
+31,Chroma Alien Set,divine,900,/mm2-chroma-alien-set.webp,mm2-alien
+32,Chroma Bauble,secret,750,/mm2-chroma-bauble.webp,mm2-christmas
+33,Chroma Blizzard,secret,150,/mm2-chroma-blizzard.webp,mm2-christmas
+34,Chroma Candleflame,uncommon,5,/mm2-chroma-candleflame.webp,mm2-halloween
+35,Chroma Darkbringer,uncommon,7.5,/mm2-chroma-darkbringer.webp,mm2-budget
+36,Chroma Elderwood,uncommon,5,/mm2-chroma-elderwood.webp,mm2-halloween
+37,Chroma Ever Set,divine,2750,/mm2-chroma-ever-set.webp,mm2-christmas
+38,Chroma Evergreen,divine,1250,/mm2-chroma-evergreen.webp,mm2-christmas
+39,Chroma Evergun,divine,1500,/mm2-chroma-evergun.webp,mm2-christmas
+40,Chroma Gingerblade,uncommon,5,/mm2-chroma-gingerblade.webp,mm2-christmas
+41,Chroma Laser,uncommon,5,/mm2-chroma-laser.webp,mm2-alien
+42,Chroma Lightbringer,uncommon,7.5,/mm2-chroma-lightbringer.webp,mm2-budget
+43,Chroma Raygun,secret,250,/mm2-chroma-raygun.webp,mm2-alien
+44,Chroma Slasher,uncommon,5,/mm2-chroma-slasher.webp,mm2-alien
+45,Chroma Snowcannon,secret,170,/mm2-chroma-snowcannon.webp,mm2-christmas
+46,Chroma Travelers Gun,divine,5000,/mm2-chroma-travelers-gun.webp,mm2-halloween
+47,Chroma Vampires Gun,secret,700,/mm2-chroma-vampires-gun.webp,mm2-halloween
+50,Common Knife,common,1,/mm2-common-knife.webp,sub-mm2
+51,Common Skin,common,1,/mm2-common-skin.webp,mm2-alien mm2-budget mm2-christmas mm2-halloween
+58,Darksword,divine,200,/mm2-darksword.webp,sub-mm2
+74,Ever Set,epic,150,/mm2-ever-set.webp,mm2-christmas
+75,Evergreen,epic,60,/mm2-evergreen.webp,mm2-christmas
+76,Evergun,epic,90,/mm2-evergun.webp,mm2-christmas
+92,Gingerscope,secret,350,/mm2-gingerscope.webp,mm2-budget mm2-christmas
+103,Harvester,rare,10,/mm2-harvester.webp,mm2-budget mm2-halloween sub-mm2
+179,Raygun,rare,30,/mm2-raygun.webp,mm2-alien
+189,Snowcannon,rare,25,/mm2-snowcannon.webp,mm2-christmas
+203,Traveler's Set,secret,240,/mm2-travelers-set.webp,mm2-halloween
+204,Traveller Axe,secret,150,/mm2-traveller-axe.webp,mm2-halloween
+205,Travellers Gun,epic,90,/mm2-travellers-gun.webp,mm2-halloween
+208,Vampires Axe,rare,30,/mm2-vampires-axe.webp,mm2-halloween
+209,Vampires Gun,epic,50,/mm2-vampires-gun.webp,mm2-halloween sub-mm2
+210,Vampires Set,epic,80,/mm2-vampires-set.webp,mm2-halloween

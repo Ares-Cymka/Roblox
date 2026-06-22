@@ -18,7 +18,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "worker": "tsx scripts/start-worker.ts",
-    "import:products": "tsx scripts/import-products.ts"
+    "import:products": "tsx scripts/import-products.ts",
+    "sync:bot-inventory": "tsx scripts/sync-bot-inventory.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
