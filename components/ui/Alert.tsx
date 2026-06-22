@@ -3,26 +3,35 @@ import { cn } from "@/lib/utils";
 
 interface AlertProps {
   children: ReactNode;
-  variant?: "warning" | "info" | "success";
+  variant?: "info" | "success" | "warning" | "error";
   className?: string;
 }
 
-export function Alert({ children, variant = "warning", className }: AlertProps) {
+const variantStyles = {
+  info: "border-rbx-blue/30 bg-rbx-blue/8 text-rbx-blue",
+  success: "border-rbx-green/30 bg-rbx-green/8 text-rbx-green",
+  warning: "border-rbx-yellow/40 bg-rbx-yellow/8 text-rbx-yellow",
+  error: "border-rbx-red/30 bg-rbx-red/8 text-rbx-red",
+};
+
+const icons = {
+  info: "ℹ",
+  success: "✓",
+  warning: "⚠",
+  error: "✕",
+};
+
+export function Alert({ children, variant = "error", className }: AlertProps) {
   return (
     <div
-      role="alert"
       className={cn(
-        "rounded-rbx border-2 px-4 py-3 text-sm font-semibold",
-        variant === "warning" &&
-          "border-rbx-red/40 bg-rbx-red/10 text-red-300",
-        variant === "info" &&
-          "border-rbx-blue/40 bg-rbx-blue/10 text-blue-200",
-        variant === "success" &&
-          "border-rbx-green/40 bg-rbx-green/10 text-green-300",
+        "flex items-start gap-3 rounded-rbx border px-4 py-3 text-sm font-medium leading-relaxed",
+        variantStyles[variant],
         className
       )}
     >
-      {children}
+      <span className="mt-0.5 flex-shrink-0 text-base leading-none">{icons[variant]}</span>
+      <span>{children}</span>
     </div>
   );
 }

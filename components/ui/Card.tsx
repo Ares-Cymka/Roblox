@@ -7,6 +7,7 @@ interface CardProps {
   title?: string;
   description?: string;
   elevated?: boolean;
+  action?: ReactNode;
 }
 
 export function Card({
@@ -15,6 +16,7 @@ export function Card({
   title,
   description,
   elevated = false,
+  action,
 }: CardProps) {
   return (
     <div
@@ -24,14 +26,17 @@ export function Card({
         className
       )}
     >
-      {(title || description) && (
-        <div className="mb-5">
-          {title && (
-            <h2 className="text-lg font-bold text-rbx-text">{title}</h2>
-          )}
-          {description && (
-            <p className="mt-1 text-sm text-rbx-muted">{description}</p>
-          )}
+      {(title || description || action) && (
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            {title && (
+              <h2 className="text-base font-bold text-rbx-text">{title}</h2>
+            )}
+            {description && (
+              <p className="mt-0.5 text-sm text-rbx-muted">{description}</p>
+            )}
+          </div>
+          {action && <div className="flex-shrink-0">{action}</div>}
         </div>
       )}
       {children}

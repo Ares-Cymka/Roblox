@@ -7,30 +7,30 @@ import { Logo } from "@/components/layout/Logo";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", exact: true },
-  { href: "/admin/products", label: "Products" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/claims", label: "Claims" },
-  { href: "/admin/customer-inventory", label: "Inventory" },
-  { href: "/admin/withdrawals", label: "Withdrawals" },
-  { href: "/admin/bots", label: "Bots" },
-  { href: "/admin/game-configs", label: "Game Configs" },
-  { href: "/admin/deliveries", label: "Deliveries" },
-  { href: "/admin/support", label: "Support Review" },
-  { href: "/admin/logs", label: "Logs" },
-  { href: "/admin/settings", label: "Settings" },
+  { href: "/admin", label: "Dashboard", icon: "⊞", exact: true },
+  { href: "/admin/products", label: "Products", icon: "📦" },
+  { href: "/admin/orders", label: "Orders", icon: "🛒" },
+  { href: "/admin/claims", label: "Claims", icon: "🎁" },
+  { href: "/admin/customer-inventory", label: "Inventory", icon: "🗃" },
+  { href: "/admin/withdrawals", label: "Withdrawals", icon: "↑" },
+  { href: "/admin/bots", label: "Bots", icon: "🤖" },
+  { href: "/admin/game-configs", label: "Game Configs", icon: "⚙" },
+  { href: "/admin/deliveries", label: "Deliveries", icon: "🚚" },
+  { href: "/admin/support", label: "Support Review", icon: "🔍" },
+  { href: "/admin/logs", label: "Logs", icon: "📋" },
+  { href: "/admin/settings", label: "Settings", icon: "⚙" },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-rbx-border bg-rbx-surface">
-      <div className="border-b border-rbx-border px-5 py-5">
-        <Logo subtitle="Admin Panel" />
+    <aside className="flex w-56 shrink-0 flex-col border-r border-rbx-border bg-rbx-surface">
+      <div className="border-b border-rbx-border px-4 py-4">
+        <Logo subtitle="Admin" />
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
         {navItems.map((item) => {
           const active = item.exact
             ? pathname === item.href
@@ -41,19 +41,20 @@ export function AdminSidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "block rounded-rbx px-3 py-2.5 text-sm font-semibold transition-colors",
+                "flex items-center gap-2.5 rounded-rbx px-3 py-2 text-sm font-semibold transition-colors",
                 active
-                  ? "bg-rbx-green/15 text-rbx-green"
+                  ? "bg-rbx-blue/10 text-rbx-blue"
                   : "text-rbx-muted hover:bg-rbx-elevated hover:text-rbx-text"
               )}
             >
+              <span className="w-4 text-center text-base leading-none">{item.icon}</span>
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-rbx-border p-4">
+      <div className="border-t border-rbx-border p-3">
         <AdminLogoutButton className="w-full" />
       </div>
     </aside>

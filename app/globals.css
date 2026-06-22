@@ -12,53 +12,58 @@
   }
 
   ::selection {
-    @apply bg-rbx-blue/30 text-white;
+    @apply bg-rbx-blue/20 text-rbx-text;
   }
 }
 
 @layer components {
+  /* === Panels & Cards === */
   .rbx-panel {
     @apply rounded-rbx border border-rbx-border bg-rbx-surface shadow-rbx-card;
   }
 
   .rbx-panel-elevated {
-    @apply rounded-rbx border border-rbx-border bg-rbx-elevated shadow-rbx-card;
+    @apply rounded-rbx border border-rbx-border bg-rbx-surface shadow-rbx-card;
   }
 
   .rbx-divider {
     @apply border-t border-rbx-border;
   }
 
+  /* === Typography === */
   .rbx-label {
-    @apply text-xs font-bold uppercase tracking-wide text-rbx-muted;
+    @apply text-xs font-bold uppercase tracking-wider text-rbx-muted;
   }
 
   .rbx-value {
     @apply text-sm font-semibold text-rbx-text;
   }
 
+  /* === List rows === */
   .rbx-list-row {
-    @apply flex items-center justify-between rounded-rbx border border-rbx-border bg-rbx-bg px-4 py-3 text-sm;
+    @apply flex items-center justify-between rounded-rbx border border-rbx-border bg-rbx-elevated px-4 py-3 text-sm;
   }
 
+  /* === Navigation === */
   .rbx-nav-link {
     @apply rounded-rbx px-3 py-2 text-sm font-semibold text-rbx-muted transition-colors hover:bg-rbx-elevated hover:text-rbx-text;
   }
 
   .rbx-nav-link-active {
-    @apply bg-rbx-elevated text-rbx-text;
+    @apply bg-rbx-blue/10 text-rbx-blue;
   }
 
+  /* === Tables === */
   .rbx-table {
     @apply w-full text-left text-sm;
   }
 
   .rbx-table thead tr {
-    @apply border-b border-rbx-border text-xs uppercase tracking-wide text-rbx-dim;
+    @apply border-b border-rbx-border text-xs uppercase tracking-wide text-rbx-muted;
   }
 
   .rbx-table tbody tr {
-    @apply border-b border-rbx-border/50 transition-colors hover:bg-rbx-elevated/40;
+    @apply border-b border-rbx-border/60 transition-colors hover:bg-rbx-elevated/70;
   }
 
   .rbx-table th {
@@ -69,7 +74,76 @@
     @apply py-3 pr-4 text-rbx-muted;
   }
 
+  /* === Form inputs === */
+  .rbx-input {
+    @apply w-full rounded-rbx border border-rbx-border bg-rbx-surface px-3 py-2 text-sm text-rbx-text
+      placeholder:text-rbx-dim focus:border-rbx-blue focus:outline-none focus:ring-2 focus:ring-rbx-blue/20;
+  }
+
   .rbx-textarea {
-    @apply min-h-32 w-full rounded-rbx border-2 border-rbx-border bg-rbx-bg px-4 py-3 text-sm text-rbx-text placeholder:text-rbx-dim focus:border-rbx-blue focus:outline-none focus:ring-2 focus:ring-rbx-blue/25;
+    @apply min-h-32 w-full rounded-rbx border border-rbx-border bg-rbx-surface px-4 py-3 text-sm text-rbx-text
+      placeholder:text-rbx-dim focus:border-rbx-blue focus:outline-none focus:ring-2 focus:ring-rbx-blue/20;
+  }
+
+  /* === Inventory tile === */
+  .inventory-tile {
+    @apply relative flex flex-col overflow-hidden rounded-rbx-lg border border-rbx-border bg-rbx-surface
+      shadow-rbx-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-rbx-card-hover;
+  }
+
+  .inventory-tile-selected {
+    @apply ring-2 ring-rbx-blue ring-offset-1;
+  }
+
+  /* === Step circle === */
+  .step-circle {
+    @apply flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold;
+  }
+
+  .step-circle-done {
+    @apply bg-rbx-green text-white;
+  }
+
+  .step-circle-active {
+    @apply bg-rbx-blue text-white ring-4 ring-rbx-blue/25;
+  }
+
+  .step-circle-pending {
+    @apply bg-rbx-border text-rbx-dim;
+  }
+
+  .step-circle-failed {
+    @apply bg-rbx-red text-white;
+  }
+
+  /* === Timeline === */
+  .timeline-dot {
+    @apply h-3 w-3 flex-shrink-0 rounded-full;
+  }
+
+  /* === Stat cards === */
+  .stat-card {
+    @apply flex flex-col items-center justify-center rounded-rbx-lg border border-rbx-border bg-rbx-surface
+      p-4 shadow-rbx-card;
+  }
+
+  /* === Game badge colors === */
+  .game-badge-MM2 { @apply border-game-mm2/40 bg-game-mm2/10 text-game-mm2; }
+  .game-badge-ADOPT_ME { @apply border-game-adopt/40 bg-game-adopt/10 text-game-adopt; }
+  .game-badge-SAB { @apply border-game-sab/40 bg-game-sab/10 text-game-sab; }
+  .game-badge-GAG2 { @apply border-game-gag2/40 bg-game-gag2/10 text-game-gag2; }
+  .game-badge-OTHER { @apply border-game-other/40 bg-game-other/10 text-game-other; }
+
+  /* === Rarity badge colors === */
+  .rarity-Common { @apply bg-rarity-common/10 text-rarity-common; }
+  .rarity-Uncommon { @apply bg-rarity-uncommon/10 text-rarity-uncommon; }
+  .rarity-Rare { @apply bg-rarity-rare/10 text-rarity-rare; }
+  .rarity-Epic { @apply bg-rarity-epic/10 text-rarity-epic; }
+  .rarity-Legendary { @apply bg-rarity-legendary/10 text-rarity-legendary; }
+  .rarity-Godly { @apply bg-rarity-godly/10 text-rarity-godly; }
+
+  /* === Toast container === */
+  .toast-container {
+    @apply fixed bottom-4 right-4 z-50 flex flex-col gap-2;
   }
 }

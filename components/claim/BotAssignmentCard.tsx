@@ -1,6 +1,7 @@
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Badge, statusToLabel } from "@/components/ui/Badge";
+import { BotAvatarPlaceholder } from "@/components/ui/ProductPlaceholder";
 import {
   canJoinGame,
   canSendFriendRequest,
@@ -55,91 +56,110 @@ export function BotAssignmentCard({
     canJoinGame(assignment.status, withdrawalStatus ?? "") &&
     (!gameConfig?.requiresCustomerJoin || Boolean(assignment.bot.privateServerUrl));
 
+  const friendSent =
+    assignment.status === "READY_TO_JOIN" ||
+    assignment.status === "COMPLETED" ||
+    assignment.status === "JOINED";
+
   return (
     <Card title="Your Delivery Bot" elevated>
-      <dl className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <dt className="rbx-label">Bot Username</dt>
-          <dd className="rbx-value">{assignment.bot.robloxUsername}</dd>
+      {/* Bot profile row */}
+      <div className="flex items-center gap-4 mb-5">
+        <BotAvatarPlaceholder username={assignment.bot.robloxUsername} size="lg" />
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-rbx-text text-lg">{assignment.bot.robloxUsername}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="h-2 w-2 rounded-full bg-rbx-green" />
+            <span className="text-xs text-rbx-green font-semibold">Online · Ready</span>
+          </div>
+          <Badge variant="pending" className="mt-1.5">
+            {statusToLabel(assignment.status)}
+          </Badge>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <dt className="rbx-label">Status</dt>
-          <dd>
-            <Badge variant="pending">
-              {assignment.status.replace(/_/g, " ")}
-            </Badge>
-          </dd>
-        </div>
-      </dl>
+      </div>
 
-      <div className="rbx-divider mt-5 pt-4">
-        <p className="mb-3 text-sm font-bold text-rbx-text">Assigned Items</p>
+      {/* Assigned items */}
+      <div className="rbx-divider pt-4">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-rbx-muted">
+          Delivering
+        </p>
         <ul className="space-y-2">
           {assignment.assignedItems.map((item) => (
             <li key={item.productId} className="rbx-list-row">
-              <span>{item.name}</span>
-              <span className="font-bold text-rbx-green">x {item.quantity}</span>
+              <span className="text-rbx-text font-medium">{item.name}</span>
+              <span className="font-bold text-rbx-blue">×{item.quantity}</span>
             </li>
           ))}
         </ul>
       </div>
 
+      {/* Mailbox message */}
       {isMailbox && !showFriend && !showJoin && (
-        <p className="mt-5 rounded-rbx border-2 border-rbx-green/30 bg-rbx-green/10 px-4 py-3 text-sm leading-relaxed text-green-200">
-          Your item will be sent through the mailbox system. Keep this page open
-          for delivery updates.
-        </p>
-      )}
-
-      {(showFriend || showJoin) && (
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          {showFriend && assignment.bot.profileUrl && (
-            <>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() =>
-                  window.open(
-                    assignment.bot.profileUrl,
-                    "_blank",
-                    "noopener,noreferrer"
-                  )
-                }
-              >
-                Add Bot
-              </Button>
-              <Button
-                type="button"
-                variant="pending"
-                disabled={
-                  onFriendRequestSent
-                    ? !friendRequestEnabled || actionLoading
-                    : false
-                }
-                onClick={() => onFriendRequestSent?.()}
-              >
-                {actionLoading ? "Updating..." : "I Sent Friend Request"}
-              </Button>
-            </>
-          )}
-          {showJoin && (
-            <Button
-              type="button"
-              disabled={!joinEnabled || actionLoading}
-              variant="outline"
-              onClick={onJoinGame}
-            >
-              {actionLoading ? "Updating..." : "Join Game"}
-            </Button>
-          )}
+        <div className="mt-5 rounded-rbx border border-rbx-green/30 bg-rbx-green/8 px-4 py-3">
+          <p className="text-sm font-semibold text-rbx-green">📬 Mailbox Delivery</p>
+          <p className="mt-1 text-xs text-rbx-muted leading-relaxed">
+            No friend request needed. Your item will be sent through the in-game mailbox system.
+            Keep this page open for delivery updates.
+          </p>
         </div>
       )}
 
-      {showFriend && showJoin && (
-        <p className="mt-4 text-xs leading-relaxed text-rbx-dim">
-          Add the bot on Roblox, send a friend request, confirm above, then join
-          the private server to complete your trade.
-        </p>
+      {/* Action buttons */}
+      {(showFriend || showJoin) && (
+        <div className="mt-5 space-y-3">
+          {showFriend && (
+            <div className="space-y-2">
+              <p className="text-xs leading-relaxed text-rbx-muted">
+                Add this bot as a Roblox friend so our team can meet you in-game.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                {assignment.bot.profileUrl && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() =>
+                      window.open(assignment.bot.profileUrl, "_blank", "noopener,noreferrer")
+                    }
+                  >
+                    👤 View Bot Profile
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant={friendSent ? "secondary" : "pending"}
+                  disabled={onFriendRequestSent ? !friendRequestEnabled || actionLoading : false}
+                  onClick={() => onFriendRequestSent?.()}
+                >
+                  {actionLoading
+                    ? "Updating…"
+                    : friendSent
+                      ? "✓ Friend Request Sent"
+                      : "I Sent Friend Request"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {showJoin && (
+            <div className="space-y-2">
+              <p className="text-xs leading-relaxed text-rbx-muted">
+                {friendSent
+                  ? "Friend request marked. Now join the private server to continue."
+                  : "After sending the friend request, join the private server."}
+              </p>
+              <Button
+                type="button"
+                variant="success"
+                disabled={!joinEnabled || actionLoading}
+                onClick={onJoinGame}
+                className="w-full"
+                size="lg"
+              >
+                {actionLoading ? "Updating…" : "🎮 Join Game"}
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </Card>
   );

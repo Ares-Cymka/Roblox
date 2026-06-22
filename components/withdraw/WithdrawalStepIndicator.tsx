@@ -2,6 +2,7 @@ import {
   getActiveWithdrawalStepIndex,
   getWithdrawalSteps,
 } from "@/lib/withdrawal-status";
+import { cn } from "@/lib/utils";
 
 interface WithdrawalStepIndicatorProps {
   deliveryMethod?: string;
@@ -11,6 +12,9 @@ interface WithdrawalStepIndicatorProps {
   assignmentStatus?: string | null;
   deliveryJobStatus?: string | null;
 }
+
+const checkIcon = "✓";
+const failIcon = "✕";
 
 export function WithdrawalStepIndicator({
   deliveryMethod,
@@ -28,32 +32,99 @@ export function WithdrawalStepIndicator({
     assignmentStatus,
     deliveryJobStatus,
   });
+  const isFailed =
+    withdrawalStatus === "FAILED" ||
+    withdrawalStatus === "EXPIRED" ||
+    withdrawalStatus === "CANCELLED";
 
   return (
-    <ol className="flex flex-wrap gap-2">
-      {steps.map((step, index) => {
-        const isComplete = index < activeIndex;
-        const isActive = index === activeIndex;
-        const isUpcoming = index > activeIndex;
+    <div className="py-2">
+      {/* Desktop: horizontal */}
+      <ol className="hidden sm:flex items-start gap-0">
+        {steps.map((step, index) => {
+          const isComplete = index < activeIndex;
+          const isActive = index === activeIndex;
+          const isLast = index === steps.length - 1;
 
-        return (
-          <li
-            key={step.id}
-            className={[
-              "rounded-rbx border-2 px-3 py-2 text-xs font-bold uppercase tracking-wide",
-              isComplete
-                ? "border-rbx-green/40 bg-rbx-green/10 text-rbx-green"
-                : isActive
-                  ? "border-rbx-blue/50 bg-rbx-blue/15 text-rbx-blue"
-                  : isUpcoming
-                    ? "border-rbx-border bg-rbx-panel text-rbx-dim"
-                    : "",
-            ].join(" ")}
-          >
-            {step.label}
-          </li>
-        );
-      })}
-    </ol>
+          return (
+            <li key={step.id} className="flex flex-1 items-center">
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    "step-circle",
+                    isComplete
+                      ? isFailed && index === activeIndex - 1
+                        ? "step-circle-failed"
+                        : "step-circle-done"
+                      : isActive
+                        ? isFailed
+                          ? "step-circle-failed"
+                          : "step-circle-active"
+                        : "step-circle-pending"
+                  )}
+                >
+                  {isComplete ? checkIcon : isFailed && isActive ? failIcon : index + 1}
+                </div>
+                <span
+                  className={cn(
+                    "mt-1.5 max-w-[72px] text-center text-[10px] font-bold leading-tight uppercase tracking-wide",
+                    isComplete
+                      ? "text-rbx-green"
+                      : isActive
+                        ? isFailed
+                          ? "text-rbx-red"
+                          : "text-rbx-blue"
+                        : "text-rbx-dim"
+                  )}
+                >
+                  {step.label}
+                </span>
+              </div>
+              {!isLast && (
+                <div
+                  className={cn(
+                    "mb-5 h-0.5 flex-1 mx-1",
+                    isComplete ? "bg-rbx-green" : "bg-rbx-border"
+                  )}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+
+      {/* Mobile: vertical */}
+      <ol className="flex sm:hidden flex-col gap-3">
+        {steps.map((step, index) => {
+          const isComplete = index < activeIndex;
+          const isActive = index === activeIndex;
+          const isLast = index === steps.length - 1;
+
+          return (
+            <li key={step.id} className="flex items-start gap-3">
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    "step-circle w-7 h-7 text-xs",
+                    isComplete ? "step-circle-done" : isActive ? (isFailed ? "step-circle-failed" : "step-circle-active") : "step-circle-pending"
+                  )}
+                >
+                  {isComplete ? checkIcon : isFailed && isActive ? failIcon : index + 1}
+                </div>
+                {!isLast && <div className="mt-1 h-5 w-0.5 bg-rbx-border" />}
+              </div>
+              <span
+                className={cn(
+                  "pt-0.5 text-sm font-semibold",
+                  isComplete ? "text-rbx-green" : isActive ? (isFailed ? "text-rbx-red" : "text-rbx-blue") : "text-rbx-dim"
+                )}
+              >
+                {step.label}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

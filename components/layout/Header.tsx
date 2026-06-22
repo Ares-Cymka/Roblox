@@ -8,13 +8,14 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/inventory", label: "Inventory" },
   { href: "/claim", label: "Claim" },
+  { href: "/store", label: "Store" },
 ];
 
 export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-rbx-border bg-rbx-surface/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-rbx-border bg-rbx-surface/95 backdrop-blur-md shadow-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Logo subtitle="Delivery" />
 
@@ -27,7 +28,7 @@ export function Header() {
                 href={link.href}
                 className={cn(
                   "rbx-nav-link",
-                  active && "rbx-nav-link-active text-rbx-blue"
+                  active && "rbx-nav-link-active"
                 )}
               >
                 {link.label}
@@ -36,9 +37,9 @@ export function Header() {
           })}
           <Link
             href="/admin/login"
-            className="ml-2 rounded-rbx bg-rbx-elevated px-4 py-2 text-sm font-bold text-rbx-muted transition-colors hover:bg-rbx-border hover:text-rbx-text"
+            className="ml-2 rounded-rbx border border-rbx-border px-3 py-1.5 text-sm font-semibold text-rbx-muted transition-colors hover:border-rbx-blue hover:text-rbx-blue"
           >
-            Admin
+            Admin ↗
           </Link>
         </nav>
       </div>

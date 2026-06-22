@@ -3,17 +3,15 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useParams } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Badge, statusToBadgeVariant } from "@/components/ui/Badge";
+import { Badge, statusToBadgeVariant, statusToLabel } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
 import { BotAssignmentCard } from "@/components/claim/BotAssignmentCard";
 import { DeliveryInstructionsCard } from "@/components/withdraw/DeliveryInstructionsCard";
-import { DeliveryLogsCard } from "@/components/withdraw/DeliveryLogsCard";
+import { DeliveryTimeline } from "@/components/withdraw/DeliveryTimeline";
 import { WithdrawalStepIndicator } from "@/components/withdraw/WithdrawalStepIndicator";
-import { WithdrawalStatusBanner } from "@/components/withdraw/WithdrawalStatusBanner";
 
 interface WithdrawalData {
   withdrawal: {
@@ -68,7 +66,79 @@ const TERMINAL_STATUSES = new Set([
   "DELIVERED",
   "FAILED",
   "CANCELLED",
+  "EXPIRED",
 ]);
+
+const STATUS_MESSAGES: Record<string, { message: string; variant: "info" | "success" | "warning" | "error" }> = {
+  USERNAME_REQUIRED: {
+    message: "Please enter your Roblox username below to begin the delivery process.",
+    variant: "info",
+  },
+  WAITING_FRIEND_REQUEST: {
+    message: "Add the delivery bot as a Roblox friend, then click 'I Sent Friend Request' to continue.",
+    variant: "info",
+  },
+  WAITING_JOIN: {
+    message: "Friend request marked as sent. Join the private server to continue your delivery.",
+    variant: "info",
+  },
+  QUEUED: {
+    message: "Your delivery is queued. Keep this page open for live updates.",
+    variant: "info",
+  },
+  PROCESSING: {
+    message: "Your delivery is currently being processed by our team.",
+    variant: "info",
+  },
+  DELIVERED: {
+    message: "Delivery completed. Thank you for using RNGBLOX!",
+    variant: "success",
+  },
+  FAILED: {
+    message: "Delivery failed. Please contact support or wait for a retry.",
+    variant: "error",
+  },
+  EXPIRED: {
+    message: "This delivery session expired because the required steps were not completed in time. Please contact support.",
+    variant: "warning",
+  },
+  SUPPORT_REQUIRED: {
+    message: "This withdrawal requires customer service review for fraud protection. Our team will review it before delivery.",
+    variant: "warning",
+  },
+};
+
+function QueueBanner({ position, waitMinutes, status }: { position: number | null; waitMinutes: number | null; status: string }) {
+  if (!["QUEUED", "WAITING_FRIEND_REQUEST", "WAITING_JOIN", "PROCESSING"].includes(status)) return null;
+  if (!position && !waitMinutes) return null;
+
+  return (
+    <div className="flex items-center gap-4 rounded-rbx border border-rbx-blue/30 bg-rbx-blue/8 px-4 py-3">
+      {position && position > 0 && (
+        <div className="text-center min-w-[48px]">
+          <p className="text-xl font-extrabold text-rbx-blue leading-none">#{position}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-rbx-muted">Queue</p>
+        </div>
+      )}
+      {position && position > 0 && waitMinutes && waitMinutes > 0 && (
+        <div className="w-px h-8 bg-rbx-border" />
+      )}
+      {waitMinutes && waitMinutes > 0 && (
+        <div className="text-center min-w-[48px]">
+          <p className="text-xl font-extrabold text-rbx-blue leading-none">~{waitMinutes}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-rbx-muted">Min Wait</p>
+        </div>
+      )}
+      <p className="flex-1 text-sm text-rbx-muted">
+        {status === "PROCESSING"
+          ? "Your delivery is being processed right now."
+          : waitMinutes && waitMinutes > 0
+            ? `Estimated wait time based on current queue.`
+            : "Your delivery is in the queue."}
+      </p>
+    </div>
+  );
+}
 
 export default function WithdrawPage() {
   const params = useParams<{ withdrawalCode: string }>();
@@ -81,31 +151,22 @@ export default function WithdrawPage() {
 
   const refreshWithdrawal = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!options?.silent) {
-        setLoading(true);
-      }
+      if (!options?.silent) setLoading(true);
       setError(null);
-
       try {
-        const res = await fetch(
-          `/api/withdrawals/lookup/${encodeURIComponent(withdrawalCode)}`
-        );
+        const res = await fetch(`/api/withdrawals/lookup/${encodeURIComponent(withdrawalCode)}`);
         const json = await res.json();
-
         if (!res.ok) {
           setError(json.error ?? "Failed to load withdrawal");
           setData(null);
           return;
         }
-
         setData(json);
         setRobloxUsername(json.withdrawal.robloxUsername ?? "");
       } catch {
         setError("Network error. Please try again.");
       } finally {
-        if (!options?.silent) {
-          setLoading(false);
-        }
+        if (!options?.silent) setLoading(false);
       }
     },
     [withdrawalCode]
@@ -113,7 +174,6 @@ export default function WithdrawPage() {
 
   const pollWithdrawal = useCallback(async () => {
     if (!data?.withdrawal.id) return;
-
     try {
       const res = await fetch(`/api/withdrawals/${data.withdrawal.id}`);
       const json = await res.json();
@@ -122,48 +182,32 @@ export default function WithdrawPage() {
         setRobloxUsername(json.withdrawal.robloxUsername ?? "");
       }
     } catch {
-      // Keep polling quietly on transient network errors.
+      // quiet
     }
   }, [data?.withdrawal.id]);
 
-  useEffect(() => {
-    refreshWithdrawal();
-  }, [refreshWithdrawal]);
+  useEffect(() => { refreshWithdrawal(); }, [refreshWithdrawal]);
 
   useEffect(() => {
     if (!data?.withdrawal.id) return;
     if (TERMINAL_STATUSES.has(data.withdrawal.status)) return;
-
-    const interval = window.setInterval(() => {
-      void pollWithdrawal();
-    }, 5000);
-
+    const interval = window.setInterval(() => { void pollWithdrawal(); }, 5000);
     return () => window.clearInterval(interval);
   }, [data?.withdrawal.id, data?.withdrawal.status, pollWithdrawal]);
 
   async function handleUsername(e: FormEvent) {
     e.preventDefault();
     if (!data) return;
-
     setActionLoading(true);
     setError(null);
-
     try {
-      const res = await fetch(
-        `/api/withdrawals/lookup/${encodeURIComponent(withdrawalCode)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ robloxUsername: robloxUsername.trim() }),
-        }
-      );
+      const res = await fetch(`/api/withdrawals/lookup/${encodeURIComponent(withdrawalCode)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ robloxUsername: robloxUsername.trim() }),
+      });
       const json = await res.json();
-
-      if (!res.ok) {
-        setError(json.error ?? "Failed to save username");
-        return;
-      }
-
+      if (!res.ok) { setError(json.error ?? "Failed to save username"); return; }
       setData(json);
     } catch {
       setError("Network error. Please try again.");
@@ -174,35 +218,18 @@ export default function WithdrawPage() {
 
   async function handleStartWithdrawal() {
     if (!data) return;
-
     setActionLoading(true);
     setError(null);
-
     try {
-      const res = await fetch(`/api/withdrawals/${data.withdrawal.id}/start`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/withdrawals/${data.withdrawal.id}/start`, { method: "POST" });
       const json = await res.json();
-
       if (!res.ok) {
         const shortageText = Array.isArray(json.shortages)
-          ? json.shortages
-              .map(
-                (entry: { name: string; required: number; available: number }) =>
-                  `${entry.name}: need ${entry.required}, bot has ${entry.available}`
-              )
-              .join("; ")
+          ? json.shortages.map((e: { name: string; required: number; available: number }) => `${e.name}: need ${e.required}, bot has ${e.available}`).join("; ")
           : null;
-
-        setError(
-          json.hint ??
-            (shortageText
-              ? `${json.error ?? "Failed to start withdrawal delivery"} (${shortageText})`
-              : json.error ?? "Failed to start withdrawal delivery")
-        );
+        setError(json.hint ?? (shortageText ? `${json.error ?? "Failed"} (${shortageText})` : json.error ?? "Failed to start delivery"));
         return;
       }
-
       setData(json);
     } catch {
       setError("Network error. Please try again.");
@@ -213,26 +240,16 @@ export default function WithdrawPage() {
 
   async function handleFriendRequestSent() {
     if (!data?.assignment) return;
-
     setActionLoading(true);
     setError(null);
-
     try {
-      const res = await fetch(
-        `/api/withdrawals/${data.withdrawal.id}/friend-request-sent`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ botAssignmentId: data.assignment.id }),
-        }
-      );
+      const res = await fetch(`/api/withdrawals/${data.withdrawal.id}/friend-request-sent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botAssignmentId: data.assignment.id }),
+      });
       const json = await res.json();
-
-      if (!res.ok) {
-        setError(json.error ?? "Failed to update friend request status");
-        return;
-      }
-
+      if (!res.ok) { setError(json.error ?? "Failed to update friend request status"); return; }
       setData(json);
     } catch {
       setError("Network error. Please try again.");
@@ -243,33 +260,19 @@ export default function WithdrawPage() {
 
   async function handleJoinGame() {
     if (!data?.assignment) return;
-
     setActionLoading(true);
     setError(null);
-
     try {
-      const res = await fetch(
-        `/api/withdrawals/${data.withdrawal.id}/join-game`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ botAssignmentId: data.assignment.id }),
-        }
-      );
+      const res = await fetch(`/api/withdrawals/${data.withdrawal.id}/join-game`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botAssignmentId: data.assignment.id }),
+      });
       const json = await res.json();
-
-      if (!res.ok) {
-        setError(json.error ?? "Failed to join game");
-        return;
-      }
-
+      if (!res.ok) { setError(json.error ?? "Failed to join game"); return; }
       setData(json);
-
-      const serverUrl =
-        json.privateServerUrl ?? data.assignment.bot.privateServerUrl;
-      if (serverUrl) {
-        window.open(serverUrl, "_blank", "noopener,noreferrer");
-      }
+      const serverUrl = json.privateServerUrl ?? data.assignment.bot.privateServerUrl;
+      if (serverUrl) window.open(serverUrl, "_blank", "noopener,noreferrer");
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -280,8 +283,10 @@ export default function WithdrawPage() {
   if (loading && !data) {
     return (
       <PageShell narrow>
-        <div className="py-16 text-center text-sm font-semibold text-rbx-muted">
-          Loading withdrawal...
+        <div className="py-16 space-y-4">
+          <div className="h-8 w-48 rounded-rbx bg-rbx-elevated animate-pulse mx-auto" />
+          <div className="h-32 rounded-rbx bg-rbx-elevated animate-pulse" />
+          <div className="h-48 rounded-rbx bg-rbx-elevated animate-pulse" />
         </div>
       </PageShell>
     );
@@ -290,40 +295,58 @@ export default function WithdrawPage() {
   if (!data) {
     return (
       <PageShell narrow>
-        <div className="space-y-4 py-12">{error && <Alert>{error}</Alert>}</div>
+        <div className="py-12">{error && <Alert>{error}</Alert>}</div>
       </PageShell>
     );
   }
 
-  const isSupportRequired = data.withdrawal.status === "SUPPORT_REQUIRED";
-  const needsUsername =
-    data.withdrawal.status === "USERNAME_REQUIRED" ||
-    data.withdrawal.status === "PENDING";
-  const canStart =
-    data.withdrawal.status === "QUEUED" &&
-    Boolean(data.withdrawal.robloxUsername) &&
-    !data.assignment;
-  const statusBannerVariant =
-    data.withdrawal.status === "DELIVERED"
-      ? "success"
-      : data.withdrawal.status === "FAILED"
-        ? "warning"
-        : isSupportRequired
-          ? "warning"
-          : "info";
+  const status = data.withdrawal.status;
+  const isSupportRequired = status === "SUPPORT_REQUIRED";
+  const needsUsername = status === "USERNAME_REQUIRED" || status === "PENDING";
+  const canStart = status === "QUEUED" && Boolean(data.withdrawal.robloxUsername) && !data.assignment;
+
+  const statusInfo = STATUS_MESSAGES[status];
 
   return (
     <PageShell narrow>
-      <PageHeader
-        title="Withdrawal"
-        description="Track your inventory withdrawal and delivery progress."
-      />
+      <div className="space-y-5">
+        {/* Header */}
+        <div>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-rbx-muted">Withdrawal</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-rbx-text">
+                {data.withdrawal.withdrawalCode}
+              </h1>
+            </div>
+            <Badge variant={statusToBadgeVariant(status)} className="text-sm px-3 py-1">
+              {statusToLabel(status)}
+            </Badge>
+          </div>
+          {/* Queue banner */}
+          {(data.queuePosition ?? 0) > 0 && (
+            <div className="mt-3">
+              <QueueBanner
+                position={data.queuePosition}
+                waitMinutes={data.estimatedWaitMinutes}
+                status={status}
+              />
+            </div>
+          )}
+        </div>
 
-      <div className="space-y-6">
-        <Card title="Progress" elevated>
+        {/* Status message */}
+        {statusInfo && (
+          <Alert variant={statusInfo.variant}>
+            {statusInfo.message}
+          </Alert>
+        )}
+
+        {/* Progress steps */}
+        <Card title="Delivery Progress" elevated>
           <WithdrawalStepIndicator
             deliveryMethod={data.gameConfig?.deliveryMethod}
-            withdrawalStatus={data.withdrawal.status}
+            withdrawalStatus={status}
             hasUsername={Boolean(data.withdrawal.robloxUsername)}
             hasAssignment={Boolean(data.assignment)}
             assignmentStatus={data.assignment?.status}
@@ -331,87 +354,64 @@ export default function WithdrawPage() {
           />
         </Card>
 
-        {(data.statusMessage || data.supportMessage) && (
-          <WithdrawalStatusBanner
-            message={data.supportMessage ?? data.statusMessage}
-            variant={statusBannerVariant}
-          />
-        )}
-
-        <Card title="Withdrawal Details" elevated>
-          <dl className="space-y-3">
-            <div className="flex justify-between gap-4">
-              <dt className="rbx-label">Withdrawal Code</dt>
-              <dd className="font-mono text-sm font-bold text-rbx-text">
-                {data.withdrawal.withdrawalCode}
+        {/* Withdrawal details */}
+        <Card title="Details" elevated>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <div>
+              <dt className="rbx-label">Status</dt>
+              <dd className="mt-1">
+                <Badge variant={statusToBadgeVariant(status)}>{statusToLabel(status)}</Badge>
               </dd>
             </div>
-            <div className="flex items-center justify-between gap-4">
-              <dt className="rbx-label">Status</dt>
-              <dd>
-                <Badge variant={statusToBadgeVariant(data.withdrawal.status)}>
-                  {data.withdrawal.status.replace(/_/g, " ")}
-                </Badge>
-              </dd>
+            <div>
+              <dt className="rbx-label">Total Value</dt>
+              <dd className="mt-1 font-bold text-rbx-text">${data.withdrawal.totalValue.toFixed(2)}</dd>
             </div>
             {data.withdrawal.robloxUsername && (
-              <div className="flex justify-between gap-4">
+              <div>
                 <dt className="rbx-label">Roblox Username</dt>
-                <dd className="rbx-value">{data.withdrawal.robloxUsername}</dd>
+                <dd className="mt-1 text-sm font-semibold text-rbx-text">{data.withdrawal.robloxUsername}</dd>
               </div>
             )}
-            <div className="flex justify-between gap-4">
-              <dt className="rbx-label">Total Value</dt>
-              <dd className="rbx-value">${data.withdrawal.totalValue.toFixed(2)}</dd>
-            </div>
             {data.game && (
-              <div className="flex justify-between gap-4">
+              <div>
                 <dt className="rbx-label">Game</dt>
-                <dd className="rbx-value">{data.game}</dd>
+                <dd className="mt-1 text-sm font-semibold text-rbx-text">{data.game.replace(/_/g, " ")}</dd>
               </div>
             )}
             {data.gameConfig?.deliveryMethod && (
-              <div className="flex justify-between gap-4">
-                <dt className="rbx-label">Delivery Method</dt>
-                <dd className="rbx-value">
+              <div>
+                <dt className="rbx-label">Method</dt>
+                <dd className="mt-1 text-sm font-semibold text-rbx-text">
                   {data.gameConfig.deliveryMethod.replace(/_/g, " ")}
-                </dd>
-              </div>
-            )}
-            {data.queuePosition !== null && data.queuePosition > 0 && (
-              <div className="flex justify-between gap-4">
-                <dt className="rbx-label">Queue Position</dt>
-                <dd className="font-bold text-rbx-blue">#{data.queuePosition}</dd>
-              </div>
-            )}
-            {data.estimatedWaitMinutes !== null && data.estimatedWaitMinutes > 0 && (
-              <div className="flex justify-between gap-4">
-                <dt className="rbx-label">Estimated Wait</dt>
-                <dd className="font-semibold text-rbx-muted">
-                  ~{data.estimatedWaitMinutes} min
                 </dd>
               </div>
             )}
           </dl>
 
-          <div className="rbx-divider mt-5 pt-4">
-            <p className="mb-3 text-sm font-bold text-rbx-text">Items</p>
+          {/* Items */}
+          <div className="rbx-divider mt-4 pt-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-rbx-muted">Items</p>
             <ul className="space-y-2">
               {data.items.map((item) => (
                 <li key={item.id} className="rbx-list-row">
-                  <span>
-                    {item.name}
-                    {item.rarity ? (
-                      <span className="text-rbx-dim"> · {item.rarity}</span>
-                    ) : null}
-                  </span>
-                  <span className="font-bold text-rbx-green">x {item.quantity}</span>
+                  <div>
+                    <span className="font-semibold text-rbx-text">{item.name}</span>
+                    {item.rarity && (
+                      <span className="ml-2 text-xs text-rbx-muted">{item.rarity}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-rbx-muted">${item.unitValue.toFixed(2)}</span>
+                    <span className="font-bold text-rbx-blue">×{item.quantity}</span>
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
         </Card>
 
+        {/* Delivery instructions */}
         {!isSupportRequired && (
           <DeliveryInstructionsCard
             game={data.game}
@@ -420,31 +420,32 @@ export default function WithdrawPage() {
           />
         )}
 
+        {/* Username input */}
         {needsUsername && !isSupportRequired && (
-          <Card title="Roblox Username" elevated>
+          <Card title="Enter Your Roblox Username" elevated>
+            <p className="mb-4 text-sm text-rbx-muted">
+              We need your Roblox username to assign a delivery bot and start the process.
+            </p>
             <form onSubmit={handleUsername} className="space-y-4">
               <Input
                 label="Roblox Username"
                 value={robloxUsername}
                 onChange={(e) => setRobloxUsername(e.target.value)}
+                placeholder="YourRobloxName"
                 required
               />
-              <Button
-                type="submit"
-                disabled={actionLoading}
-                className="w-full"
-                size="lg"
-              >
-                {actionLoading ? "Saving..." : "Continue"}
+              <Button type="submit" disabled={actionLoading} className="w-full" size="lg">
+                {actionLoading ? "Saving…" : "Confirm Username →"}
               </Button>
             </form>
           </Card>
         )}
 
+        {/* Start delivery */}
         {canStart && !isSupportRequired && (
-          <Card title="Start Delivery" elevated>
+          <Card title="Ready to Start Delivery" elevated>
             <p className="mb-4 text-sm text-rbx-muted">
-              Username linked. Start delivery to assign a bot from the queue.
+              Username confirmed. Click below to be assigned a delivery bot from the queue.
             </p>
             <Button
               type="button"
@@ -453,23 +454,27 @@ export default function WithdrawPage() {
               className="w-full"
               size="lg"
             >
-              {actionLoading ? "Starting..." : "Start Delivery"}
+              {actionLoading ? "Starting…" : "🚀 Start Delivery"}
             </Button>
           </Card>
         )}
 
+        {/* Bot assignment */}
         {data.assignment && (
           <BotAssignmentCard
             assignment={data.assignment}
             gameConfig={data.gameConfig}
-            withdrawalStatus={data.withdrawal.status}
+            withdrawalStatus={status}
             onFriendRequestSent={handleFriendRequestSent}
             onJoinGame={handleJoinGame}
             actionLoading={actionLoading}
           />
         )}
 
-        <DeliveryLogsCard logs={data.logs} />
+        {/* Delivery timeline */}
+        <Card title="Delivery Timeline" elevated>
+          <DeliveryTimeline logs={data.logs} />
+        </Card>
 
         {error && <Alert>{error}</Alert>}
       </div>
