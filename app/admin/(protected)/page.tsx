@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getAdminDashboardStats } from "@/server/services/admin-dashboard";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
@@ -12,9 +13,13 @@ export default async function AdminDashboardPage() {
     { label: "Total Products", value: stats.totalProducts, variant: "neutral" as const },
     { label: "Total Orders", value: stats.totalOrders, variant: "neutral" as const },
     { label: "Total Claims", value: stats.totalClaims, variant: "info" as const },
-    { label: "Active Bots", value: stats.activeBots, variant: "success" as const },
-    { label: "Pending Deliveries", value: stats.pendingDeliveries, variant: "info" as const },
+    { label: "Active Queue", value: stats.pendingDeliveries, variant: "info" as const },
+    { label: "Processing", value: stats.processingDeliveries, variant: "info" as const },
     { label: "Failed Deliveries", value: stats.failedDeliveries, variant: "warning" as const },
+    { label: "Support Required", value: stats.supportRequired, variant: "warning" as const },
+    { label: "Online Bots", value: stats.onlineBots, variant: "success" as const },
+    { label: "Offline / Disabled", value: stats.offlineBots, variant: "neutral" as const },
+    { label: "Avg Wait (min)", value: stats.avgDeliveryMinutes, variant: "neutral" as const },
   ];
 
   return (
@@ -46,14 +51,13 @@ export default async function AdminDashboardPage() {
             ["/admin/orders", "Review orders"],
             ["/admin/bots", "Monitor delivery bots"],
             ["/admin/deliveries", "Track delivery jobs"],
+            ["/admin/support", "Support review queue"],
+            ["/admin/withdrawals", "Withdrawals"],
           ].map(([href, label]) => (
             <li key={href}>
-              <a
-                href={href}
-                className="font-semibold text-rbx-blue hover:underline"
-              >
+              <Link href={href!} className="font-semibold text-rbx-blue hover:underline">
                 {label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>

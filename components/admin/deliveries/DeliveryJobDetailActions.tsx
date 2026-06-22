@@ -19,8 +19,8 @@ export function DeliveryJobDetailActions({
   const [error, setError] = useState<string | null>(null);
 
   async function runAction(
-    action: "mark-delivered" | "mark-failed" | "retry",
-    body?: Record<string, string>
+    action: string,
+    body?: Record<string, string | number>
   ) {
     setLoading(action);
     setError(null);
@@ -55,11 +55,31 @@ export function DeliveryJobDetailActions({
     await runAction("mark-failed", { reason: reason.trim() });
   }
 
-  const canMarkDelivered = ["QUEUED", "PROCESSING", "WAITING_USER", "RETRYING"].includes(
-    status
-  );
-  const canMarkFailed = status !== "DELIVERED" && status !== "FAILED";
+  async function handleRetryLater() {
+    const reason = window.prompt("Enter reason for delayed retry:", "Will retry later");
+    if (!reason?.trim()) return;
+    const minutesStr = window.prompt("Retry after how many minutes?", "15");
+    const minutes = parseInt(minutesStr ?? "", 10);
+    if (!minutes || minutes < 1) return;
+    await runAction("retry-later", { reason: reason.trim(), retryAfterMinutes: minutes });
+  }
+
+  async function handleReassign() {
+    if (!window.confirm("Find a different available bot and reassign this delivery?")) return;
+    await runAction("reassign");
+  }
+
+  async function handleExpire() {
+    if (!window.confirm("Expire this withdrawal? The customer will need to create a new withdrawal.")) return;
+    await runAction("expire");
+  }
+
+  const canMarkDelivered = ["QUEUED", "PROCESSING", "WAITING_USER", "RETRYING"].includes(status);
+  const canMarkFailed = status !== "DELIVERED" && status !== "FAILED" && status !== "CANCELLED";
   const canRetry = status === "FAILED";
+  const canRetryLater = status !== "DELIVERED" && status !== "CANCELLED";
+  const canReassign = status !== "DELIVERED" && status !== "CANCELLED";
+  const canExpire = status === "WAITING_USER";
 
   return (
     <div className="space-y-3">
@@ -93,7 +113,37 @@ export function DeliveryJobDetailActions({
             disabled={loading !== null}
             onClick={() => runAction("retry")}
           >
-            {loading === "retry" ? "Retrying..." : "Retry Failed"}
+            {loading === "retry" ? "Retrying..." : "Retry Now"}
+          </Button>
+        )}
+        {canRetryLater && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={loading !== null}
+            onClick={handleRetryLater}
+          >
+            {loading === "retry-later" ? "Scheduling..." : "Retry Later"}
+          </Button>
+        )}
+        {canReassign && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={loading !== null}
+            onClick={handleReassign}
+          >
+            {loading === "reassign" ? "Reassigning..." : "Reassign Bot"}
+          </Button>
+        )}
+        {canExpire && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={loading !== null}
+            onClick={handleExpire}
+          >
+            {loading === "expire" ? "Expiring..." : "Expire Now"}
           </Button>
         )}
       </div>

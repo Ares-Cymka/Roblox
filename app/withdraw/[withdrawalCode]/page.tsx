@@ -59,6 +59,8 @@ interface WithdrawalData {
   }>;
   statusMessage: string | null;
   supportMessage: string | null;
+  queuePosition: number | null;
+  estimatedWaitMinutes: number | null;
 }
 
 // SUPPORT_REQUIRED is NOT terminal — it may be approved later, so we keep polling.
@@ -373,6 +375,20 @@ export default function WithdrawPage() {
                 <dt className="rbx-label">Delivery Method</dt>
                 <dd className="rbx-value">
                   {data.gameConfig.deliveryMethod.replace(/_/g, " ")}
+                </dd>
+              </div>
+            )}
+            {data.queuePosition !== null && data.queuePosition > 0 && (
+              <div className="flex justify-between gap-4">
+                <dt className="rbx-label">Queue Position</dt>
+                <dd className="font-bold text-rbx-blue">#{data.queuePosition}</dd>
+              </div>
+            )}
+            {data.estimatedWaitMinutes !== null && data.estimatedWaitMinutes > 0 && (
+              <div className="flex justify-between gap-4">
+                <dt className="rbx-label">Estimated Wait</dt>
+                <dd className="font-semibold text-rbx-muted">
+                  ~{data.estimatedWaitMinutes} min
                 </dd>
               </div>
             )}

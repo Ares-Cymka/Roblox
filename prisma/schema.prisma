@@ -76,6 +76,7 @@ enum WithdrawalStatus {
   FAILED
   CANCELLED
   SUPPORT_REQUIRED
+  EXPIRED
 }
 
 enum BotStatus {
@@ -191,10 +192,11 @@ model GameDeliveryConfig {
   game                      GameType       @unique
   deliveryMethod            DeliveryMethod
   requiresFriend            Boolean        @default(false)
-  requiresPrivateServer       Boolean        @default(false)
+  requiresPrivateServer     Boolean        @default(false)
   requiresCustomerJoin      Boolean        @default(false)
   requiresManualConfirmation Boolean       @default(true)
   instructions              String?
+  averageDeliveryMinutes    Int            @default(5)
   createdAt                 DateTime       @default(now())
   updatedAt                 DateTime       @updatedAt
 }
@@ -434,6 +436,8 @@ model DeliveryJob {
   status       DeliveryStatus @default(QUEUED)
   attempts     Int            @default(0)
   lastError    String?
+  nextRetryAt  DateTime?
+  retryReason  String?
   lockedAt     DateTime?
   deliveredAt  DateTime?
   createdAt    DateTime       @default(now())

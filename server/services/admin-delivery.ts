@@ -1,5 +1,6 @@
 import {
   BotAssignmentStatus,
+  BotStatus,
   DeliveryMethod,
   DeliveryStatus,
   GameType,
@@ -423,12 +424,12 @@ export async function markDeliveryJobDelivered(deliveryJobId: string) {
 
   await syncBotCurrentDeliveries(botAccountId);
 
-  const updated = await loadDeliveryJob(deliveryJobId);
-  if (!updated) {
+  const updatedDelivered = await loadDeliveryJob(deliveryJobId);
+  if (!updatedDelivered) {
     return { error: "Delivery job not found" as const };
   }
 
-  return formatDeliveryJobDetail(updated);
+  return formatDeliveryJobDetail(updatedDelivered);
 }
 
 export async function markDeliveryJobFailed(
@@ -540,12 +541,12 @@ export async function markDeliveryJobFailed(
 
   await syncBotCurrentDeliveries(botAccountId);
 
-  const updated = await loadDeliveryJob(deliveryJobId);
-  if (!updated) {
+  const updatedFailed = await loadDeliveryJob(deliveryJobId);
+  if (!updatedFailed) {
     return { error: "Delivery job not found" as const };
   }
 
-  return formatDeliveryJobDetail(updated);
+  return formatDeliveryJobDetail(updatedFailed);
 }
 
 export function resolveRetryAssignmentStatus(input: {
@@ -677,10 +678,363 @@ export async function retryFailedDeliveryJob(deliveryJobId: string) {
 
   await syncBotCurrentDeliveries(botAccountId);
 
-  const updated = await loadDeliveryJob(deliveryJobId);
-  if (!updated) {
+  const updatedRetry = await loadDeliveryJob(deliveryJobId);
+  if (!updatedRetry) {
     return { error: "Delivery job not found" as const };
   }
 
-  return formatDeliveryJobDetail(updated);
+  return formatDeliveryJobDetail(updatedRetry);
+}
+
+export async function markDeliveryJobRetryLater(
+  deliveryJobId: string,
+  reason: string,
+  retryAfterMinutes: number
+) {
+  const job = await loadDeliveryJob(deliveryJobId);
+  if (!job) return { error: "Delivery job not found" as const };
+
+  const withdrawal = getWithdrawalFromJob(job);
+  if (!withdrawal) return { error: "Withdrawal delivery job required" as const };
+
+  if (
+    job.status === DeliveryStatus.DELIVERED ||
+    withdrawal.status === WithdrawalStatus.DELIVERED
+  ) {
+    return { error: "Cannot schedule retry after delivery is completed" as const };
+  }
+
+  const nextRetryAt = new Date(Date.now() + retryAfterMinutes * 60 * 1000);
+
+  await prisma.deliveryJob.update({
+    where: { id: deliveryJobId },
+    data: {
+      status: DeliveryStatus.RETRYING,
+      lastError: reason,
+      retryReason: reason,
+      nextRetryAt,
+      lockedAt: null,
+    },
+  });
+
+  await prisma.withdrawal.update({
+    where: { id: withdrawal.id },
+    data: { status: WithdrawalStatus.QUEUED },
+  });
+
+  await prisma.deliveryLog.create({
+    data: {
+      deliveryJobId,
+      withdrawalId: withdrawal.id,
+      level: "WARN",
+      message: `Delivery scheduled for retry in ${retryAfterMinutes} minutes: ${reason}`,
+    },
+  });
+
+  const retried = await loadDeliveryJob(deliveryJobId);
+  if (!retried) return { error: "Delivery job not found" as const };
+  return formatDeliveryJobDetail(retried);
+}
+
+export async function reassignDeliveryJob(deliveryJobId: string) {
+  const job = await loadDeliveryJob(deliveryJobId);
+  if (!job) return { error: "Delivery job not found" as const };
+
+  const withdrawal = getWithdrawalFromJob(job);
+  if (!withdrawal) return { error: "Withdrawal delivery job required" as const };
+
+  if (job.status === DeliveryStatus.DELIVERED) {
+    return { error: "Cannot reassign a delivered job" as const };
+  }
+
+  const oldAssignment = getAssignmentFromJob(job);
+  if (!oldAssignment) return { error: "Bot assignment not found" as const };
+
+  const items = withdrawal.items;
+  const game = items[0]?.product.game;
+  if (!game) return { error: "No items found" as const };
+
+  const oldBotId = oldAssignment.botAccountId;
+
+  const candidates = await prisma.botAccount.findMany({
+    where: { game, status: BotStatus.ONLINE, id: { not: oldBotId } },
+    include: { inventories: true },
+    orderBy: [{ currentDeliveries: "asc" }],
+  });
+
+  const newBot = candidates.find((bot) => {
+    if (bot.currentDeliveries >= bot.maxConcurrentDeliveries) return false;
+    return items.every((item) => {
+      const inv = bot.inventories.find((i) => i.productId === item.productId);
+      if (!inv) return false;
+      return inv.quantity - inv.reservedQuantity >= item.quantity;
+    });
+  });
+
+  if (!newBot) {
+    return { error: "No available bot with enough inventory" as const };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of items) {
+      const inv = await tx.botInventory.findUnique({
+        where: { botAccountId_productId: { botAccountId: oldBotId, productId: item.productId } },
+      });
+      if (inv) {
+        await tx.botInventory.update({
+          where: { id: inv.id },
+          data: { reservedQuantity: Math.max(0, inv.reservedQuantity - item.quantity) },
+        });
+      }
+    }
+
+    await tx.botAssignment.update({
+      where: { id: oldAssignment.id },
+      data: { status: BotAssignmentStatus.CANCELLED, completedAt: new Date() },
+    });
+
+    const oldBot = await tx.botAccount.findUnique({ where: { id: oldBotId } });
+    if (oldBot && oldBot.currentDeliveries > 0) {
+      await tx.botAccount.update({
+        where: { id: oldBotId },
+        data: { currentDeliveries: oldBot.currentDeliveries - 1 },
+      });
+    }
+
+    for (const item of items) {
+      await tx.botInventory.update({
+        where: { botAccountId_productId: { botAccountId: newBot.id, productId: item.productId } },
+        data: { reservedQuantity: { increment: item.quantity } },
+      });
+    }
+
+    await tx.botAssignment.create({
+      data: {
+        botAccountId: newBot.id,
+        withdrawalId: withdrawal.id,
+        status: BotAssignmentStatus.ASSIGNED,
+      },
+    });
+
+    await tx.botAccount.update({
+      where: { id: newBot.id },
+      data: { currentDeliveries: { increment: 1 } },
+    });
+
+    await tx.deliveryLog.create({
+      data: {
+        deliveryJobId,
+        withdrawalId: withdrawal.id,
+        message: `Delivery reassigned from ${oldAssignment.botAccount.robloxUsername} to ${newBot.robloxUsername}`,
+      },
+    });
+  });
+
+  await syncBotCurrentDeliveries(oldBotId);
+  await syncBotCurrentDeliveries(newBot.id);
+
+  const reassigned = await loadDeliveryJob(deliveryJobId);
+  if (!reassigned) return { error: "Delivery job not found" as const };
+  return formatDeliveryJobDetail(reassigned);
+}
+
+export async function expireWaitingWithdrawals(
+  expiryMinutes = 30
+): Promise<{ expiredCount: number }> {
+  const cutoff = new Date(Date.now() - expiryMinutes * 60 * 1000);
+
+  const waiting = await prisma.withdrawal.findMany({
+    where: {
+      status: { in: [WithdrawalStatus.WAITING_FRIEND_REQUEST, WithdrawalStatus.WAITING_JOIN] },
+      createdAt: { lt: cutoff },
+      deliveryJob: { isNot: null },
+    },
+    include: {
+      items: true,
+      deliveryJob: true,
+      botAssignments: { orderBy: { assignedAt: "desc" }, take: 1 },
+    },
+  });
+
+  let expiredCount = 0;
+
+  for (const w of waiting) {
+    const delivJob = w.deliveryJob;
+    const assignment = w.botAssignments[0];
+    if (!delivJob) continue;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.deliveryJob.update({
+        where: { id: delivJob.id },
+        data: { status: DeliveryStatus.CANCELLED, lockedAt: null },
+      });
+      await tx.withdrawal.update({
+        where: { id: w.id },
+        data: { status: WithdrawalStatus.EXPIRED },
+      });
+      if (assignment) {
+        await tx.botAssignment.update({
+          where: { id: assignment.id },
+          data: { status: BotAssignmentStatus.CANCELLED, completedAt: new Date() },
+        });
+        for (const item of w.items) {
+          const inv = await tx.botInventory.findUnique({
+            where: { botAccountId_productId: { botAccountId: assignment.botAccountId, productId: item.productId } },
+          });
+          if (inv) {
+            await tx.botInventory.update({
+              where: { id: inv.id },
+              data: { reservedQuantity: Math.max(0, inv.reservedQuantity - item.quantity) },
+            });
+          }
+        }
+        const bot = await tx.botAccount.findUnique({ where: { id: assignment.botAccountId } });
+        if (bot && bot.currentDeliveries > 0) {
+          await tx.botAccount.update({
+            where: { id: bot.id },
+            data: { currentDeliveries: bot.currentDeliveries - 1 },
+          });
+        }
+      }
+      await tx.deliveryLog.create({
+        data: {
+          deliveryJobId: delivJob.id,
+          withdrawalId: w.id,
+          level: "WARN",
+          message: `Withdrawal expired: customer did not complete required steps within ${expiryMinutes} minutes.`,
+        },
+      });
+    });
+
+    if (assignment) await syncBotCurrentDeliveries(assignment.botAccountId);
+    expiredCount++;
+  }
+
+  return { expiredCount };
+}
+
+export async function expireSingleWithdrawal(deliveryJobId: string) {
+  const job = await loadDeliveryJob(deliveryJobId);
+  if (!job) return { error: "Delivery job not found" as const };
+
+  const withdrawal = getWithdrawalFromJob(job);
+  if (!withdrawal) return { error: "Withdrawal delivery job required" as const };
+
+  if (
+    withdrawal.status !== WithdrawalStatus.WAITING_FRIEND_REQUEST &&
+    withdrawal.status !== WithdrawalStatus.WAITING_JOIN
+  ) {
+    return { error: "Withdrawal is not in a waiting state" as const };
+  }
+
+  const assignment = getAssignmentFromJob(job);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.deliveryJob.update({
+      where: { id: deliveryJobId },
+      data: { status: DeliveryStatus.CANCELLED, lockedAt: null },
+    });
+    await tx.withdrawal.update({
+      where: { id: withdrawal.id },
+      data: { status: WithdrawalStatus.EXPIRED },
+    });
+    if (assignment) {
+      await tx.botAssignment.update({
+        where: { id: assignment.id },
+        data: { status: BotAssignmentStatus.CANCELLED, completedAt: new Date() },
+      });
+      for (const item of withdrawal.items) {
+        const inv = await tx.botInventory.findUnique({
+          where: { botAccountId_productId: { botAccountId: assignment.botAccountId, productId: item.productId } },
+        });
+        if (inv) {
+          await tx.botInventory.update({
+            where: { id: inv.id },
+            data: { reservedQuantity: Math.max(0, inv.reservedQuantity - item.quantity) },
+          });
+        }
+      }
+      const bot = await tx.botAccount.findUnique({ where: { id: assignment.botAccountId } });
+      if (bot && bot.currentDeliveries > 0) {
+        await tx.botAccount.update({
+          where: { id: bot.id },
+          data: { currentDeliveries: bot.currentDeliveries - 1 },
+        });
+      }
+    }
+    await tx.deliveryLog.create({
+      data: {
+        deliveryJobId,
+        withdrawalId: withdrawal.id,
+        level: "WARN",
+        message: "Withdrawal manually expired by admin.",
+      },
+    });
+  });
+
+  if (assignment) await syncBotCurrentDeliveries(assignment.botAccountId);
+
+  const expired = await loadDeliveryJob(deliveryJobId);
+  if (!expired) return { error: "Delivery job not found" as const };
+  return formatDeliveryJobDetail(expired);
+}
+
+export async function listDeliveryJobsFiltered(params: {
+  status?: string;
+  game?: string;
+  failedOnly?: boolean;
+  queuedOnly?: boolean;
+  search?: string;
+  limit?: number;
+}) {
+  const limit = params.limit ?? 100;
+
+  const statusFilter = params.failedOnly
+    ? [DeliveryStatus.FAILED]
+    : params.queuedOnly
+      ? [DeliveryStatus.QUEUED, DeliveryStatus.WAITING_USER, DeliveryStatus.RETRYING]
+      : params.status
+        ? [params.status as DeliveryStatus]
+        : undefined;
+
+  const jobs = await prisma.deliveryJob.findMany({
+    take: limit,
+    orderBy: { createdAt: "desc" },
+    where: {
+      ...(statusFilter ? { status: { in: statusFilter } } : {}),
+      ...(params.search
+        ? {
+            OR: [
+              { withdrawal: { withdrawalCode: { contains: params.search, mode: "insensitive" } } },
+              { withdrawal: { robloxUsername: { contains: params.search, mode: "insensitive" } } },
+              {
+                withdrawal: {
+                  botAssignments: {
+                    some: {
+                      botAccount: {
+                        robloxUsername: { contains: params.search, mode: "insensitive" },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          }
+        : {}),
+    },
+    include: deliveryJobInclude,
+  });
+
+  const rows = await Promise.all(
+    jobs.map(async (row) => {
+      const r = formatDeliveryJobListRow(row);
+      if (r.game) {
+        const config = await getGameDeliveryConfig(r.game);
+        r.deliveryMethod = config?.deliveryMethod ?? null;
+      }
+      return r;
+    })
+  );
+
+  return params.game ? rows.filter((r) => r.game === params.game) : rows;
 }

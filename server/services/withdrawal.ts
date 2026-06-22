@@ -5,6 +5,7 @@ import {
   WithdrawalStatus,
   Prisma,
 } from "@prisma/client";
+import { getWithdrawalQueueInfo } from "@/server/services/queue-estimate";
 import { prisma } from "@/lib/prisma";
 import {
   FRAUD_REVIEW_THRESHOLD,
@@ -122,7 +123,9 @@ export function formatWithdrawalResponse(
     requiresCustomerJoin: boolean;
     requiresManualConfirmation: boolean;
     instructions: string | null;
-  } | null
+    averageDeliveryMinutes?: number;
+  } | null,
+  queueInfo?: { queuePosition: number; estimatedWaitMinutes: number }
 ) {
   const game = withdrawal.items[0]?.product.game ?? null;
   const assignment = withdrawal.botAssignments[0];
@@ -185,6 +188,8 @@ export function formatWithdrawalResponse(
       withdrawal.status === WithdrawalStatus.SUPPORT_REQUIRED
         ? SUPPORT_REQUIRED_MESSAGE
         : null,
+    queuePosition: queueInfo?.queuePosition ?? null,
+    estimatedWaitMinutes: queueInfo?.estimatedWaitMinutes ?? null,
   };
 }
 
@@ -276,8 +281,9 @@ export async function getWithdrawalByCode(withdrawalCode: string) {
 
   const game = withdrawal.items[0]?.product.game;
   const gameConfig = game ? await getGameDeliveryConfig(game) : null;
+  const queueInfo = game ? await getWithdrawalQueueInfo(withdrawal.id, game) : undefined;
 
-  return formatWithdrawalResponse(withdrawal, gameConfig);
+  return formatWithdrawalResponse(withdrawal, gameConfig, queueInfo);
 }
 
 export async function linkWithdrawalUsername(

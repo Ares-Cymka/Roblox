@@ -20,6 +20,7 @@ export async function updateGameDeliveryConfig(
     requiresCustomerJoin?: boolean;
     requiresManualConfirmation?: boolean;
     instructions?: string | null;
+    averageDeliveryMinutes?: number;
   }
 ) {
   return prisma.gameDeliveryConfig.update({
