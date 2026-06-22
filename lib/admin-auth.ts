@@ -1,13 +1,22 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_SESSION_COOKIE } from "@/lib/admin-session";
+import {
+  ADMIN_SESSION_COOKIE,
+  getClearAdminSessionCookieOptions,
+} from "@/lib/admin-session";
 import { validateAdminSession } from "@/server/services/auth";
 
 export async function requireAdminSession(): Promise<void> {
   const cookieStore = cookies();
   const signedCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
 
-  if (!signedCookie || !(await validateAdminSession(signedCookie))) {
+  if (!signedCookie) {
+    redirect("/admin/login");
+  }
+
+  const valid = await validateAdminSession(signedCookie);
+  if (!valid) {
+    cookieStore.set(ADMIN_SESSION_COOKIE, "", getClearAdminSessionCookieOptions());
     redirect("/admin/login");
   }
 }

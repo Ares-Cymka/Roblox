@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
 
 export function AdminLoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +23,11 @@ export function AdminLoginForm() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        credentials: "same-origin",
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
       });
 
       const data = await res.json();
@@ -35,8 +38,13 @@ export function AdminLoginForm() {
       }
 
       const from = searchParams.get("from");
-      router.push(from && from.startsWith("/admin") ? from : "/admin");
-      router.refresh();
+      const target =
+        from && from.startsWith("/admin") && from !== "/admin/login"
+          ? from
+          : "/admin";
+
+      // Full page navigation ensures the new session cookie is sent immediately.
+      window.location.assign(target);
     } catch {
       setError("Network error. Please try again.");
     } finally {

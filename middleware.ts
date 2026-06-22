@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   ADMIN_SESSION_COOKIE,
+  getClearAdminSessionCookieOptions,
   verifySignedSessionCookie,
 } from "@/lib/admin-session";
 
@@ -14,21 +15,14 @@ export function middleware(request: NextRequest) {
   const isProtectedAdminApi =
     pathname.startsWith("/api/admin") && !isLoginApi;
 
+  if (!isProtectedAdminPage && !isProtectedAdminApi) {
+    return NextResponse.next();
+  }
+
   const signedCookie = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
   const hasValidSignature = Boolean(
     signedCookie && verifySignedSessionCookie(signedCookie)
   );
-
-  if (isLoginPage) {
-    if (hasValidSignature) {
-      return NextResponse.redirect(new URL("/admin", request.url));
-    }
-    return NextResponse.next();
-  }
-
-  if (!isProtectedAdminPage && !isProtectedAdminApi) {
-    return NextResponse.next();
-  }
 
   if (!hasValidSignature) {
     if (isProtectedAdminApi) {
@@ -39,7 +33,16 @@ export function middleware(request: NextRequest) {
     if (pathname !== "/admin") {
       loginUrl.searchParams.set("from", pathname);
     }
-    return NextResponse.redirect(loginUrl);
+
+    const response = NextResponse.redirect(loginUrl);
+    if (signedCookie) {
+      response.cookies.set(
+        ADMIN_SESSION_COOKIE,
+        "",
+        getClearAdminSessionCookieOptions()
+      );
+    }
+    return response;
   }
 
   return NextResponse.next();
