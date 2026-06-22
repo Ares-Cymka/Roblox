@@ -4,6 +4,7 @@ import {
   getWithdrawalByCode,
   linkWithdrawalUsername,
 } from "@/server/services/withdrawal";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  const ip = getClientIp(request.headers);
+  if (!checkRateLimit(`username:${ip}`, 30, 60_000)) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   const withdrawalCode = context.params.withdrawalCode?.trim();
   if (!withdrawalCode) {
     return NextResponse.json({ error: "Withdrawal not found" }, { status: 404 });

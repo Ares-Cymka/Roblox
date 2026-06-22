@@ -1,6 +1,7 @@
 import {
   BotAssignmentStatus,
   BotStatus,
+  CustomerInventoryLogReason,
   DeliveryMethod,
   DeliveryStatus,
   GameType,
@@ -419,6 +420,39 @@ export async function markDeliveryJobDelivered(deliveryJobId: string) {
         where: { id: botAccountId },
         data: { currentDeliveries: bot.currentDeliveries - 1 },
       });
+    }
+
+    // Deduct customer inventory for each delivered item
+    for (const item of items) {
+      const customerInv = await tx.customerInventory.findFirst({
+        where: {
+          productId: item.productId,
+          OR: [
+            withdrawal.customerId ? { customerId: withdrawal.customerId } : undefined,
+            withdrawal.sessionId ? { sessionId: withdrawal.sessionId } : undefined,
+          ].filter(Boolean) as Prisma.CustomerInventoryWhereInput[],
+        },
+      });
+
+      if (customerInv) {
+        await tx.customerInventory.update({
+          where: { id: customerInv.id },
+          data: {
+            quantity: Math.max(0, customerInv.quantity - item.quantity),
+            reservedQuantity: Math.max(0, customerInv.reservedQuantity - item.quantity),
+          },
+        });
+
+        await tx.customerInventoryLog.create({
+          data: {
+            customerId: withdrawal.customerId ?? null,
+            sessionId: withdrawal.customerId ? null : (withdrawal.sessionId ?? null),
+            productId: item.productId,
+            delta: -item.quantity,
+            reason: CustomerInventoryLogReason.WITHDRAW_DELIVERED,
+          },
+        });
+      }
     }
   });
 

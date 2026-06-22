@@ -196,6 +196,17 @@ describe("markDeliveryJobDelivered", () => {
         findUnique: vi.fn().mockResolvedValue({ id: "bot1", currentDeliveries: 1 }),
         update: vi.fn(),
       },
+      // customer inventory deduction (added in audit fix)
+      customerInventory: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: "ci1",
+          productId: "product1",
+          quantity: 2,
+          reservedQuantity: 2,
+        }),
+        update: vi.fn(),
+      },
+      customerInventoryLog: { create: vi.fn() },
     };
 
     transaction.mockImplementation(async (callback) => callback(tx));
@@ -213,6 +224,11 @@ describe("markDeliveryJobDelivered", () => {
     expect(tx.inventoryLog.create).toHaveBeenCalledTimes(1);
     expect(tx.deliveryLog.create).toHaveBeenCalledTimes(1);
     expect(syncBotCurrentDeliveries).toHaveBeenCalledWith("bot1");
+    // verify customer inventory was deducted
+    expect(tx.customerInventory.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ quantity: 0, reservedQuantity: 0 }) })
+    );
+    expect(tx.customerInventoryLog.create).toHaveBeenCalledTimes(1);
   });
 
   it("does not deduct inventory twice when already delivered", async () => {

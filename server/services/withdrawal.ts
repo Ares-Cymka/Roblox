@@ -1,5 +1,6 @@
 import {
   BotAssignmentStatus,
+  CustomerInventoryLogReason,
   DeliveryStatus,
   GameType,
   WithdrawalStatus,
@@ -35,6 +36,7 @@ const TERMINAL_WITHDRAWAL_STATUSES: WithdrawalStatus[] = [
   WithdrawalStatus.DELIVERED,
   WithdrawalStatus.FAILED,
   WithdrawalStatus.CANCELLED,
+  WithdrawalStatus.EXPIRED,
   WithdrawalStatus.SUPPORT_REQUIRED,
 ];
 
@@ -303,7 +305,8 @@ export async function linkWithdrawalUsername(
   if (
     withdrawal.status === WithdrawalStatus.DELIVERED ||
     withdrawal.status === WithdrawalStatus.CANCELLED ||
-    withdrawal.status === WithdrawalStatus.FAILED
+    withdrawal.status === WithdrawalStatus.FAILED ||
+    withdrawal.status === WithdrawalStatus.EXPIRED
   ) {
     return { error: `Withdrawal is ${withdrawal.status.toLowerCase()}` as const };
   }
@@ -340,6 +343,10 @@ export async function startWithdrawal(withdrawalId: string) {
 
   if (withdrawal.status === WithdrawalStatus.CANCELLED) {
     return { error: "Withdrawal cancelled" as const };
+  }
+
+  if (withdrawal.status === WithdrawalStatus.EXPIRED) {
+    return { error: "Withdrawal has expired" as const };
   }
 
   if (withdrawal.deliveryJob && withdrawal.botAssignments[0]) {
@@ -718,6 +725,16 @@ export async function cancelWithdrawal(withdrawalId: string) {
           where: { id: inventory.id },
           data: {
             reservedQuantity: { decrement: item.quantity },
+          },
+        });
+
+        await tx.customerInventoryLog.create({
+          data: {
+            customerId: withdrawal.customerId ?? null,
+            sessionId: withdrawal.customerId ? null : (withdrawal.sessionId ?? null),
+            productId: item.productId,
+            delta: item.quantity,
+            reason: CustomerInventoryLogReason.WITHDRAW_CANCELLED,
           },
         });
       }

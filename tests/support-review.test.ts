@@ -143,6 +143,7 @@ function mockTransaction() {
         findMany: customerInventoryFindMany,
         update: customerInventoryUpdate,
       },
+      customerInventoryLog: { create: vi.fn().mockResolvedValue({}) },
       botInventory: {
         findUnique: botInventoryFindUnique,
         update: botInventoryUpdate,

@@ -1,12 +1,14 @@
 import {
   BotAssignmentStatus,
   BotStatus,
+  DeliveryMethod,
   DeliveryStatus,
   GameType,
   Prisma,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { syncGameBotCapacities } from "@/server/services/bot-capacity";
+import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
 
 export type DeliveryItem = {
   productId: string;
@@ -198,6 +200,14 @@ export async function assignBotAndCreateDeliveryJob(
     return { success: false, error: error ?? "No bot available", shortages };
   }
 
+  // Determine initial bot assignment status based on game delivery config
+  const gameConfig = await getGameDeliveryConfig(game);
+  const isMailbox = gameConfig?.deliveryMethod === DeliveryMethod.MAILBOX ||
+    (!gameConfig?.requiresFriend && !gameConfig?.requiresCustomerJoin);
+  const initialAssignmentStatus = isMailbox
+    ? BotAssignmentStatus.ASSIGNED
+    : BotAssignmentStatus.FRIEND_REQUEST_PENDING;
+
   try {
     await prisma.$transaction(async (tx) => {
       const existingJob =
@@ -234,7 +244,7 @@ export async function assignBotAndCreateDeliveryJob(
           botAccountId: bot.id,
           claimId: target.type === "claim" ? target.claimId : null,
           withdrawalId: target.type === "withdrawal" ? target.withdrawalId : null,
-          status: BotAssignmentStatus.FRIEND_REQUEST_PENDING,
+          status: initialAssignmentStatus,
         },
       });
 

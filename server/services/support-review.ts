@@ -1,5 +1,6 @@
 import {
   BotAssignmentStatus,
+  CustomerInventoryLogReason,
   DeliveryStatus,
   WithdrawalStatus,
 } from "@prisma/client";
@@ -308,6 +309,16 @@ export async function rejectSupportWithdrawal(
           where: { id: inv.id },
           data: {
             reservedQuantity: Math.max(0, inv.reservedQuantity - item.quantity),
+          },
+        });
+
+        await tx.customerInventoryLog.create({
+          data: {
+            customerId: w.customerId ?? null,
+            sessionId: w.customerId ? null : (w.sessionId ?? null),
+            productId: item.productId,
+            delta: item.quantity,
+            reason: CustomerInventoryLogReason.WITHDRAW_CANCELLED,
           },
         });
       }
