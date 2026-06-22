@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type BadgeVariant = "success" | "warning" | "neutral" | "info";
+type BadgeVariant = "success" | "warning" | "neutral" | "info" | "pending";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -13,6 +13,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   warning: "bg-red-100 text-brand-warning",
   neutral: "bg-gray-100 text-gray-600",
   info: "bg-blue-100 text-brand-secondary",
+  pending: "bg-yellow-100 text-yellow-800",
 };
 
 export function Badge({ children, variant = "neutral", className }: BadgeProps) {
@@ -45,6 +46,11 @@ export function statusToBadgeVariant(
     case "RETRYING":
     case "QUEUED":
       return "info";
+    case "WAITING_FRIEND_REQUEST":
+    case "FRIEND_REQUEST_PENDING":
+    case "PENDING":
+    case "USERNAME_LINKED":
+      return "pending";
     default:
       return "neutral";
   }

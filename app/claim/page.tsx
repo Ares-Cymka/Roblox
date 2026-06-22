@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge, statusToBadgeVariant } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
+import { BotAssignmentCard } from "@/components/claim/BotAssignmentCard";
 
 interface ClaimItem {
   id: string;
@@ -16,8 +17,24 @@ interface ClaimItem {
   rarity: string | null;
 }
 
+interface BotAssignment {
+  id: string;
+  status: string;
+  bot: {
+    robloxUsername: string;
+    profileUrl: string;
+    privateServerUrl: string | null;
+  };
+  assignedItems: Array<{
+    productId: string;
+    name: string;
+    quantity: number;
+  }>;
+}
+
 interface ClaimLookupResult {
   claim: {
+    id: string;
     claimCode: string;
     status: string;
     robloxUsername: string | null;
@@ -28,12 +45,20 @@ interface ClaimLookupResult {
     game: string | null;
   };
   items: ClaimItem[];
+  assignment: BotAssignment | null;
+  deliveryJob: { status: string } | null;
 }
 
-type Step = "lookup" | "details" | "done";
+function isUsernameLinked(status: string): boolean {
+  return status !== "PENDING";
+}
+
+function hasStartedClaim(result: ClaimLookupResult): boolean {
+  return Boolean(result.assignment);
+}
 
 export default function ClaimPage() {
-  const [step, setStep] = useState<Step>("lookup");
+  const [step, setStep] = useState<"lookup" | "active">("lookup");
   const [claimCode, setClaimCode] = useState("");
   const [robloxUsername, setRobloxUsername] = useState("");
   const [result, setResult] = useState<ClaimLookupResult | null>(null);
@@ -61,7 +86,7 @@ export default function ClaimPage() {
 
       setResult(data);
       setRobloxUsername(data.claim.robloxUsername ?? "");
-      setStep("details");
+      setStep("active");
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -93,7 +118,32 @@ export default function ClaimPage() {
       }
 
       setResult(data);
-      setStep("done");
+      setRobloxUsername(data.claim.robloxUsername ?? robloxUsername.trim());
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleStartClaim() {
+    if (!result) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/claims/${result.claim.id}/start`, {
+        method: "POST",
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Failed to start claim");
+        return;
+      }
+
+      setResult(data);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -109,18 +159,26 @@ export default function ClaimPage() {
     setError(null);
   }
 
+  const usernameLinked = result ? isUsernameLinked(result.claim.status) : false;
+  const claimStarted = result ? hasStartedClaim(result) : false;
+  const canStartClaim =
+    result &&
+    usernameLinked &&
+    !claimStarted &&
+    (result.claim.status === "USERNAME_LINKED" || result.claim.status === "PENDING");
+
   return (
     <PageShell>
       <div className="mx-auto max-w-lg space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Claim Delivery</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Enter your claim code to view your order and link your Roblox account.
+            Enter your claim code, link your Roblox account, and start delivery.
           </p>
         </div>
 
         {step === "lookup" && (
-          <Card>
+          <Card className="border-gray-200">
             <form onSubmit={handleLookup} className="space-y-4">
               <Input
                 label="Claim Code"
@@ -136,9 +194,9 @@ export default function ClaimPage() {
           </Card>
         )}
 
-        {step !== "lookup" && result && (
+        {step === "active" && result && (
           <>
-            <Card title="Your Order">
+            <Card title="Your Order" className="border-gray-200">
               <dl className="space-y-3 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-gray-500">Order Code</dt>
@@ -156,6 +214,12 @@ export default function ClaimPage() {
                     </Badge>
                   </dd>
                 </div>
+                {result.claim.robloxUsername && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-gray-500">Roblox Username</dt>
+                    <dd className="font-medium">{result.claim.robloxUsername}</dd>
+                  </div>
+                )}
               </dl>
 
               <div className="mt-5 border-t border-gray-100 pt-4">
@@ -164,7 +228,7 @@ export default function ClaimPage() {
                   {result.items.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-center justify-between rounded-lg bg-brand-bg/50 px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm"
                     >
                       <span>
                         {item.name}
@@ -179,8 +243,8 @@ export default function ClaimPage() {
               </div>
             </Card>
 
-            {step === "details" && (
-              <Card title="Link Roblox Account">
+            {!usernameLinked && (
+              <Card title="Link Roblox Account" className="border-gray-200">
                 <form onSubmit={handleContinue} className="space-y-4">
                   <Input
                     label="Roblox Username"
@@ -197,15 +261,25 @@ export default function ClaimPage() {
               </Card>
             )}
 
-            {step === "done" && (
-              <Alert variant="info">
-                Username linked. Your claim status is now{" "}
-                <span className="font-semibold">
-                  {result.claim.status.replace(/_/g, " ")}
-                </span>
-                . Delivery will continue from here.
-              </Alert>
+            {usernameLinked && !claimStarted && (
+              <Card title="Start Delivery" className="border-gray-200">
+                <p className="mb-4 text-sm text-gray-600">
+                  Your Roblox username is linked. Start the claim to assign a delivery bot.
+                </p>
+                {canStartClaim && (
+                  <Button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleStartClaim}
+                    className="w-full bg-brand-primary hover:bg-brand-primary-hover"
+                  >
+                    {loading ? "Starting..." : "Start Claim"}
+                  </Button>
+                )}
+              </Card>
             )}
+
+            {result.assignment && <BotAssignmentCard assignment={result.assignment} />}
 
             <Button type="button" variant="ghost" className="w-full" onClick={resetFlow}>
               Start Over

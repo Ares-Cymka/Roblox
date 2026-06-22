@@ -11,6 +11,91 @@ import type {
   CreateTestOrderInput,
 } from "@/server/validators/order";
 
+function formatClaimItems(
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    product: {
+      name: string;
+      game: GameType;
+      imageUrl: string | null;
+      rarity: string | null;
+    };
+  }>
+) {
+  return items.map((item) => ({
+    id: item.id,
+    productId: item.productId,
+    name: item.product.name,
+    game: item.product.game,
+    quantity: item.quantity,
+    imageUrl: item.product.imageUrl,
+    rarity: item.product.rarity,
+  }));
+}
+
+function formatClaimLookupResponse(
+  claim: Prisma.ClaimGetPayload<{
+    include: {
+      order: {
+        include: {
+          customer: true;
+          items: { include: { product: true } };
+        };
+      };
+      items: { include: { product: true } };
+      deliveryJob: true;
+      botAssignments: {
+        include: { botAccount: true };
+        orderBy: { assignedAt: "desc" };
+        take: 1;
+      };
+    };
+  }>
+) {
+  const game = claim.items[0]?.product.game ?? claim.order.items[0]?.product.game;
+  const assignment = claim.botAssignments[0];
+
+  return {
+    claim: {
+      id: claim.id,
+      claimCode: claim.claimCode,
+      status: claim.status,
+      robloxUsername: claim.robloxUsername,
+      expiresAt: claim.expiresAt,
+      createdAt: claim.createdAt,
+    },
+    order: {
+      id: claim.order.id,
+      orderCode: claim.order.orderCode,
+      status: claim.order.status,
+      game,
+      createdAt: claim.order.createdAt,
+    },
+    items: formatClaimItems(claim.items),
+    assignment: assignment
+      ? {
+          id: assignment.id,
+          status: assignment.status,
+          bot: {
+            robloxUsername: assignment.botAccount.robloxUsername,
+            profileUrl: assignment.botAccount.profileUrl,
+            privateServerUrl: assignment.botAccount.privateServerUrl,
+          },
+          assignedItems: claim.items.map((item) => ({
+            productId: item.productId,
+            name: item.product.name,
+            quantity: item.quantity,
+          })),
+        }
+      : null,
+    deliveryJob: claim.deliveryJob
+      ? { status: claim.deliveryJob.status }
+      : null,
+  };
+}
+
 async function generateUniqueOrderCode(): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
     const orderCode = generateOrderCode();
@@ -172,39 +257,18 @@ export async function lookupClaimByCode(claimCode: string) {
       items: {
         include: { product: true },
       },
+      deliveryJob: true,
+      botAssignments: {
+        include: { botAccount: true },
+        orderBy: { assignedAt: "desc" },
+        take: 1,
+      },
     },
   });
 
   if (!claim) return null;
 
-  const game = claim.items[0]?.product.game ?? claim.order.items[0]?.product.game;
-
-  return {
-    claim: {
-      id: claim.id,
-      claimCode: claim.claimCode,
-      status: claim.status,
-      robloxUsername: claim.robloxUsername,
-      expiresAt: claim.expiresAt,
-      createdAt: claim.createdAt,
-    },
-    order: {
-      id: claim.order.id,
-      orderCode: claim.order.orderCode,
-      status: claim.order.status,
-      game,
-      createdAt: claim.order.createdAt,
-    },
-    items: claim.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      name: item.product.name,
-      game: item.product.game,
-      quantity: item.quantity,
-      imageUrl: item.product.imageUrl,
-      rarity: item.product.rarity,
-    })),
-  };
+  return formatClaimLookupResponse(claim);
 }
 
 export async function continueClaim(input: ClaimContinueInput) {
@@ -230,7 +294,7 @@ export async function continueClaim(input: ClaimContinueInput) {
 
   const robloxUsername = input.robloxUsername.trim();
 
-  const updated = await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     const customer = await findOrCreateCustomerByUsername(robloxUsername, tx);
 
     const nextClaim = await tx.claim.update({
@@ -247,40 +311,36 @@ export async function continueClaim(input: ClaimContinueInput) {
 
     await tx.order.update({
       where: { id: claim.orderId },
-      data: { status: OrderStatus.CLAIM_STARTED, customerId: customer.id },
+      data: { customerId: customer.id },
     });
 
     return nextClaim;
   });
 
-  const game = updated.items[0]?.product.game;
+  const refreshed = await prisma.claim.findUnique({
+    where: { id: claim.id },
+    include: {
+      order: {
+        include: {
+          customer: true,
+          items: { include: { product: true } },
+        },
+      },
+      items: { include: { product: true } },
+      deliveryJob: true,
+      botAssignments: {
+        include: { botAccount: true },
+        orderBy: { assignedAt: "desc" },
+        take: 1,
+      },
+    },
+  });
 
-  return {
-    claim: {
-      id: updated.id,
-      claimCode: updated.claimCode,
-      status: updated.status,
-      robloxUsername: updated.robloxUsername,
-      expiresAt: updated.expiresAt,
-      createdAt: updated.createdAt,
-    },
-    order: {
-      id: claim.order.id,
-      orderCode: claim.order.orderCode,
-      status: OrderStatus.CLAIM_STARTED,
-      game,
-      createdAt: claim.order.createdAt,
-    },
-    items: updated.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      name: item.product.name,
-      game: item.product.game,
-      quantity: item.quantity,
-      imageUrl: item.product.imageUrl,
-      rarity: item.product.rarity,
-    })),
-  };
+  if (!refreshed) {
+    return { error: "Claim not found" as const };
+  }
+
+  return formatClaimLookupResponse(refreshed);
 }
 
 export async function listProductsForGame(game: GameType) {
