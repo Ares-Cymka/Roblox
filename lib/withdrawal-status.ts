@@ -75,22 +75,9 @@ export function getActiveWithdrawalStepIndex(
     return queuedIndex >= 0 ? queuedIndex : steps.length - 2;
   }
 
-  if (
-    withdrawalStatus === "QUEUED" ||
-    deliveryJobStatus === "QUEUED" ||
-    deliveryJobStatus === "RETRYING"
-  ) {
-    const queuedIndex = steps.findIndex(
-      (step) => step.id === "delivery_queued" || step.id === "mailbox_queued"
-    );
-    return queuedIndex >= 0 ? queuedIndex : steps.length - 2;
-  }
-
-  if (withdrawalStatus === "WAITING_JOIN") {
-    const joinIndex = steps.findIndex((step) => step.id === "join_game");
-    return joinIndex >= 0 ? joinIndex : 2;
-  }
-
+  // Withdrawal-level trading statuses take priority over deliveryJob QUEUED state.
+  // This prevents the step indicator from jumping to "Delivery queued" while the
+  // customer still needs to complete friend request / join game steps.
   if (
     withdrawalStatus === "WAITING_FRIEND_REQUEST" ||
     assignmentStatus === "FRIEND_REQUEST_PENDING" ||
@@ -108,6 +95,22 @@ export function getActiveWithdrawalStepIndex(
       }
       return friendIndex;
     }
+  }
+
+  if (withdrawalStatus === "WAITING_JOIN") {
+    const joinIndex = steps.findIndex((step) => step.id === "join_game");
+    return joinIndex >= 0 ? joinIndex : 2;
+  }
+
+  if (
+    withdrawalStatus === "QUEUED" ||
+    deliveryJobStatus === "QUEUED" ||
+    deliveryJobStatus === "RETRYING"
+  ) {
+    const queuedIndex = steps.findIndex(
+      (step) => step.id === "delivery_queued" || step.id === "mailbox_queued"
+    );
+    return queuedIndex >= 0 ? queuedIndex : steps.length - 2;
   }
 
   if (hasAssignment) {

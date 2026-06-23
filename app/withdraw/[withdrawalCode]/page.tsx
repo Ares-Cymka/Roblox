@@ -487,22 +487,38 @@ export default function WithdrawPage() {
           </Card>
         )}
 
-        {/* MM2 delivery panel — rich flow for MM2 trading */}
-        {data.game === "MM2" && data.assignment && data.mm2Session ? (
-          <MM2DeliveryPanel
-            withdrawalId={data.withdrawal.id}
-            assignment={data.assignment}
-            mm2Session={data.mm2Session}
-            withdrawalStatus={status}
-            onUpdate={(json) => {
-              if (json && typeof json === "object" && "withdrawal" in (json as object)) {
-                setData(json as WithdrawalData);
-                setRobloxUsername(
-                  (json as WithdrawalData).withdrawal.robloxUsername ?? ""
-                );
-              }
-            }}
-          />
+        {/* MM2 delivery panel — rich flow for MM2 trading.
+            Show MM2DeliveryPanel whenever game=MM2 and bot is assigned
+            (with or without mm2Session — falls back to BotAssignmentCard only
+             for non-MM2 games). */}
+        {data.game === "MM2" && data.assignment ? (
+          data.mm2Session ? (
+            <MM2DeliveryPanel
+              withdrawalId={data.withdrawal.id}
+              assignment={data.assignment}
+              mm2Session={data.mm2Session}
+              withdrawalStatus={status}
+              onUpdate={(json) => {
+                if (json && typeof json === "object" && "withdrawal" in (json as object)) {
+                  setData(json as WithdrawalData);
+                  setRobloxUsername(
+                    (json as WithdrawalData).withdrawal.robloxUsername ?? ""
+                  );
+                }
+              }}
+            />
+          ) : (
+            /* mm2Session not yet created — fall back to generic card but still
+               show friend/join buttons via BotAssignmentCard */
+            <BotAssignmentCard
+              assignment={data.assignment}
+              gameConfig={data.gameConfig}
+              withdrawalStatus={status}
+              onFriendRequestSent={handleFriendRequestSent}
+              onJoinGame={handleJoinGame}
+              actionLoading={actionLoading}
+            />
+          )
         ) : (
           data.assignment && (
             <BotAssignmentCard

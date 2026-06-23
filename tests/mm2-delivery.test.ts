@@ -68,7 +68,21 @@ function makeSession(overrides: Partial<ReturnType<typeof baseSession>> = {}) {
   return { ...baseSession(), ...overrides };
 }
 
-function baseSession() {
+function baseSession(): {
+  id: string;
+  withdrawalId: string;
+  botAccountId: string;
+  customerRobloxUsername: string;
+  privateServerUrl: string | null;
+  status: MM2SessionStatus;
+  customerJoinedAt: Date | null;
+  operatorReadyAt: Date | null;
+  tradeStartedAt: Date | null;
+  tradeCompletedAt: Date | null;
+  tradeFailedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+} {
   return {
     id: "sess-1",
     withdrawalId: "w-1",
