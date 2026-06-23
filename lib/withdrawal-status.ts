@@ -1,6 +1,6 @@
 export const WITHDRAWAL_STATUS_MESSAGES: Record<string, string> = {
   USERNAME_REQUIRED: "Please enter your Roblox username.",
-  PENDING: "Please enter your Roblox username.",
+  PENDING: "Username confirmed. Click Start Delivery to assign your delivery bot.",
   WAITING_FRIEND_REQUEST: "Please add the delivery bot as a friend.",
   WAITING_JOIN:
     "Friend request marked as sent. Please join the private server.",

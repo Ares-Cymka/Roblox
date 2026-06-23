@@ -87,7 +87,7 @@ const STATUS_MESSAGES: Record<string, { message: string; variant: "info" | "succ
     variant: "info",
   },
   PENDING: {
-    message: "Username confirmed. Assigning your delivery bot…",
+    message: "Username confirmed. Click Start Delivery to assign your delivery bot.",
     variant: "info",
   },
   WAITING_FRIEND_REQUEST: {
@@ -225,20 +225,6 @@ export default function WithdrawPage() {
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Failed to save username"); return; }
       setData(json);
-      if (json.startError) {
-        const shortageText = Array.isArray(json.startShortages)
-          ? json.startShortages
-              .map((e: { name: string; required: number; available: number }) =>
-                `${e.name}: need ${e.required}, available ${e.available}`)
-              .join("; ")
-          : null;
-        setError(
-          json.startHint ??
-            (shortageText
-              ? `${json.startError} (${shortageText})`
-              : json.startError)
-        );
-      }
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -489,9 +475,9 @@ export default function WithdrawPage() {
 
         {/* Start delivery */}
         {canStart && !isSupportRequired && (
-          <Card title="Ready to Start Delivery" elevated>
+          <Card title="Assign Delivery Bot" elevated>
             <p className="mb-4 text-sm text-rbx-muted">
-              Username confirmed. Click below to be assigned a delivery bot from the queue.
+              Username confirmed. Click below to assign an available delivery bot, then follow the friend request and join game steps.
             </p>
             {error && (
               <div className="mb-4">
@@ -505,7 +491,7 @@ export default function WithdrawPage() {
               className="w-full"
               size="lg"
             >
-              {actionLoading ? "Starting…" : "🚀 Start Delivery"}
+              {actionLoading ? "Assigning…" : "🚀 Assign Delivery Bot"}
             </Button>
           </Card>
         )}

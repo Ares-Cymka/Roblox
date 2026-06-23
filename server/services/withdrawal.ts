@@ -330,19 +330,7 @@ export async function linkWithdrawalUsername(
   const game = updated.items[0]?.product.game;
   const gameConfig = game ? await getGameDeliveryConfig(game) : null;
 
-  // Auto-assign bot immediately after username confirmation
-  const started = await startWithdrawal(updated.id);
-  if (!("error" in started)) {
-    return started;
-  }
-
-  // Bot unavailable — return saved username so customer can retry Start Delivery
-  return {
-    ...formatWithdrawalResponse(updated, gameConfig),
-    startError: started.error,
-    startHint: "hint" in started ? started.hint : undefined,
-    startShortages: "shortages" in started ? started.shortages : undefined,
-  };
+  return formatWithdrawalResponse(updated, gameConfig);
 }
 
 export async function startWithdrawal(withdrawalId: string) {
