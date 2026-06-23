@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { syncGameBotCapacities } from "@/server/services/bot-capacity";
 import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
 import { dispatchDeliveryJob, resolveControllerType } from "@/server/bot-controller/BotControllerService";
+import { createMM2Session } from "@/server/services/mm2-delivery";
 
 export type DeliveryItem = {
   productId: string;
@@ -284,6 +285,27 @@ export async function assignBotAndCreateDeliveryJob(
         data: { currentDeliveries: { increment: 1 } },
       });
     });
+
+    // Create MM2 delivery session after the transaction succeeds
+    if (game === GameType.MM2 && target.type === "withdrawal") {
+      const customerRobloxUsername =
+        (
+          await prisma.withdrawal.findUnique({
+            where: { id: target.withdrawalId },
+            select: { robloxUsername: true },
+          })
+        )?.robloxUsername ?? "";
+
+      await createMM2Session({
+        withdrawalId: target.withdrawalId,
+        botAccountId: bot.id,
+        customerRobloxUsername,
+        privateServerUrl: bot.privateServerUrl ?? null,
+        requiresFriend: gameConfig?.requiresFriend ?? true,
+      }).catch((err) => {
+        console.error("[delivery-request] Failed to create MM2 session:", err);
+      });
+    }
   } catch (err) {
     if (err instanceof Error && err.message === "NOT_ENOUGH_INVENTORY") {
       return { success: false, error: "Not enough bot inventory" };

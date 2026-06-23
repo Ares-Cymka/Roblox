@@ -128,6 +128,18 @@ enum LogLevel {
   ERROR
 }
 
+enum MM2SessionStatus {
+  WAITING_FRIEND
+  WAITING_CUSTOMER_JOIN
+  CUSTOMER_IN_SERVER
+  OPERATOR_READY
+  TRADE_SENT
+  TRADE_ACCEPTED
+  DELIVERED
+  FAILED
+  EXPIRED
+}
+
 model AdminUser {
   id           String         @id @default(cuid())
   email        String         @unique
@@ -251,6 +263,7 @@ model Withdrawal {
   botAssignments  BotAssignment[]
   deliveryJob     DeliveryJob?
   supportNotes    SupportNote[]
+  mm2Session      MM2DeliverySession?
 
   @@index([customerId])
   @@index([sessionId])
@@ -410,6 +423,7 @@ model BotAccount {
   assignments             BotAssignment[]
   inventoryLogs           InventoryLog[]
   session                 BotSession?
+  mm2Sessions             MM2DeliverySession[]
 
   @@unique([game, robloxUsername])
   @@index([game])
@@ -446,6 +460,10 @@ model BotAssignment {
   assignedAt    DateTime            @default(now())
   completedAt   DateTime?
   failureReason String?
+  // MM2 / game-specific session timestamps
+  customerJoinedAt DateTime?   // Customer clicked "I Am In Server"
+  operatorReadyAt  DateTime?   // Operator marked themselves ready in-game
+  tradeStartedAt   DateTime?   // Operator sent trade request
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
@@ -526,6 +544,29 @@ model SupportNote {
 
   @@index([withdrawalId])
   @@index([adminUserId])
+  @@index([createdAt])
+}
+
+model MM2DeliverySession {
+  id                     String           @id @default(cuid())
+  withdrawalId           String           @unique
+  withdrawal             Withdrawal       @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  botAccountId           String
+  botAccount             BotAccount       @relation(fields: [botAccountId], references: [id], onDelete: Cascade)
+  customerRobloxUsername String
+  privateServerUrl       String?
+  status                 MM2SessionStatus @default(WAITING_FRIEND)
+  customerJoinedAt       DateTime?
+  operatorReadyAt        DateTime?
+  tradeStartedAt         DateTime?
+  tradeCompletedAt       DateTime?
+  tradeFailedAt          DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  @@index([withdrawalId])
+  @@index([botAccountId])
+  @@index([status])
   @@index([createdAt])
 }
 

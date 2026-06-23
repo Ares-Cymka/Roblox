@@ -19,6 +19,15 @@ async function connectWithRetry(maxAttempts = 5, delayMs = 4000) {
   }
 }
 
+const MM2_INSTRUCTIONS =
+  "Join the assigned bot's MM2 private server and wait in the lobby. The delivery bot will send you a trade request. Only accept a trade from the assigned bot username.\n" +
+  "Step 1: Add the delivery bot as a Roblox friend.\n" +
+  "Step 2: Click Join MM2 Server to enter the bot's private server.\n" +
+  "Step 3: Stay in the MM2 lobby after joining.\n" +
+  "Step 4: Wait for a trade request from the assigned bot.\n" +
+  "Step 5: Only accept the trade from the shown bot username.\n" +
+  "Step 6: Confirm the trade and keep this page open.";
+
 const TRADING_INSTRUCTIONS =
   "Step 1: Add the bot as a friend on Roblox.\nStep 2: Join the bot's private server.\nStep 3: Complete the in-game trade.\nStep 4: Wait for website delivery confirmation.";
 
@@ -34,7 +43,7 @@ async function seedGameDeliveryConfigs() {
       requiresPrivateServer: true,
       requiresCustomerJoin: true,
       requiresManualConfirmation: true,
-      instructions: TRADING_INSTRUCTIONS,
+      instructions: MM2_INSTRUCTIONS,
     },
     {
       game: GameType.ADOPT_ME,

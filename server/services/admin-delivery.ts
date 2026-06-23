@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { syncBotCurrentDeliveries } from "@/server/services/bot-capacity";
 import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
+import { formatMM2Session } from "@/server/services/mm2-delivery";
 
 export const TRADING_OPERATOR_INSTRUCTIONS = [
   "Login to the assigned Roblox bot account manually.",
@@ -45,6 +46,7 @@ const deliveryJobInclude = {
         orderBy: { assignedAt: "desc" as const },
         take: 1,
       },
+      mm2Session: true,
     },
   },
   claim: {
@@ -183,6 +185,9 @@ export async function formatDeliveryJobDetail(job: LoadedDeliveryJob) {
       : null,
     items,
     operatorInstructions: getOperatorInstructions(gameConfig?.deliveryMethod),
+    mm2Session: withdrawal?.mm2Session
+      ? formatMM2Session(withdrawal.mm2Session)
+      : null,
     logs: job.logs.map((log) => ({
       id: log.id,
       level: log.level,

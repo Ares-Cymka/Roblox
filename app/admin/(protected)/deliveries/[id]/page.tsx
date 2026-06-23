@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { DeliveryJobDetailActions } from "@/components/admin/deliveries/DeliveryJobDetailActions";
 import { DeliveryProofForm } from "@/components/admin/deliveries/DeliveryProofForm";
+import { MM2OperatorPanel } from "@/components/admin/deliveries/MM2OperatorPanel";
 import { Card } from "@/components/ui/Card";
 import { Badge, statusToBadgeVariant } from "@/components/ui/Badge";
 import { getDeliveryJobDetail } from "@/server/services/admin-delivery";
@@ -173,6 +174,23 @@ export default async function AdminDeliveryDetailPage({
               ))}
           </ol>
         </Card>
+      )}
+
+      {/* MM2 Operator Panel — shown when game is MM2 and session exists */}
+      {delivery.game === "MM2" && delivery.mm2Session && delivery.assignment && (
+        <MM2OperatorPanel
+          deliveryJobId={delivery.id}
+          deliveryJobStatus={delivery.status}
+          mm2Session={delivery.mm2Session}
+          customerRobloxUsername={delivery.withdrawal?.robloxUsername ?? null}
+          botProfileUrl={delivery.assignment.bot.profileUrl}
+          botUsername={delivery.assignment.bot.robloxUsername}
+          privateServerUrl={delivery.assignment.bot.privateServerUrl}
+          items={delivery.items.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+          }))}
+        />
       )}
 
       <Card title="Operator Actions" elevated>

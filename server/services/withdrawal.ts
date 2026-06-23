@@ -6,6 +6,7 @@ import {
   WithdrawalStatus,
   Prisma,
 } from "@prisma/client";
+import { formatMM2Session } from "@/server/services/mm2-delivery";
 import { getWithdrawalQueueInfo } from "@/server/services/queue-estimate";
 import { prisma } from "@/lib/prisma";
 import {
@@ -52,6 +53,7 @@ const withdrawalInclude = {
     orderBy: { assignedAt: "desc" as const },
     take: 1,
   },
+  mm2Session: true,
 } satisfies Prisma.WithdrawalInclude;
 
 type LoadedWithdrawal = Prisma.WithdrawalGetPayload<{
@@ -192,8 +194,12 @@ export function formatWithdrawalResponse(
         : null,
     queuePosition: queueInfo?.queuePosition ?? null,
     estimatedWaitMinutes: queueInfo?.estimatedWaitMinutes ?? null,
+    mm2Session: withdrawal.mm2Session
+      ? formatMM2Session(withdrawal.mm2Session)
+      : null,
   };
 }
+
 
 export async function createWithdrawal(input: {
   sessionId?: string;

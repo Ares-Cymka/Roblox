@@ -12,6 +12,7 @@ import { BotAssignmentCard } from "@/components/claim/BotAssignmentCard";
 import { DeliveryInstructionsCard } from "@/components/withdraw/DeliveryInstructionsCard";
 import { DeliveryTimeline } from "@/components/withdraw/DeliveryTimeline";
 import { WithdrawalStepIndicator } from "@/components/withdraw/WithdrawalStepIndicator";
+import { MM2DeliveryPanel } from "@/components/withdraw/MM2DeliveryPanel";
 
 interface WithdrawalData {
   withdrawal: {
@@ -59,6 +60,17 @@ interface WithdrawalData {
   supportMessage: string | null;
   queuePosition: number | null;
   estimatedWaitMinutes: number | null;
+  mm2Session: {
+    id: string;
+    status: string;
+    customerRobloxUsername: string;
+    privateServerUrl: string | null;
+    customerJoinedAt: string | null;
+    operatorReadyAt: string | null;
+    tradeStartedAt: string | null;
+    tradeCompletedAt: string | null;
+    statusMessage: { message: string; variant: "info" | "success" | "warning" | "error" } | null;
+  } | null;
 }
 
 // SUPPORT_REQUIRED is NOT terminal — it may be approved later, so we keep polling.
@@ -475,16 +487,33 @@ export default function WithdrawPage() {
           </Card>
         )}
 
-        {/* Bot assignment */}
-        {data.assignment && (
-          <BotAssignmentCard
+        {/* MM2 delivery panel — rich flow for MM2 trading */}
+        {data.game === "MM2" && data.assignment && data.mm2Session ? (
+          <MM2DeliveryPanel
+            withdrawalId={data.withdrawal.id}
             assignment={data.assignment}
-            gameConfig={data.gameConfig}
+            mm2Session={data.mm2Session}
             withdrawalStatus={status}
-            onFriendRequestSent={handleFriendRequestSent}
-            onJoinGame={handleJoinGame}
-            actionLoading={actionLoading}
+            onUpdate={(json) => {
+              if (json && typeof json === "object" && "withdrawal" in (json as object)) {
+                setData(json as WithdrawalData);
+                setRobloxUsername(
+                  (json as WithdrawalData).withdrawal.robloxUsername ?? ""
+                );
+              }
+            }}
           />
+        ) : (
+          data.assignment && (
+            <BotAssignmentCard
+              assignment={data.assignment}
+              gameConfig={data.gameConfig}
+              withdrawalStatus={status}
+              onFriendRequestSent={handleFriendRequestSent}
+              onJoinGame={handleJoinGame}
+              actionLoading={actionLoading}
+            />
+          )
         )}
 
         {/* Delivery timeline */}
