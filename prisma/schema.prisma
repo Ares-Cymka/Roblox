@@ -108,6 +108,20 @@ enum DeliveryStatus {
   CANCELLED
 }
 
+enum BotControllerType {
+  MANUAL
+  MOCK
+  AUTO
+}
+
+enum BotSessionStatus {
+  IDLE
+  ACTIVE
+  BUSY
+  ERROR
+  OFFLINE
+}
+
 enum LogLevel {
   INFO
   WARN
@@ -395,6 +409,7 @@ model BotAccount {
   inventories             BotInventory[]
   assignments             BotAssignment[]
   inventoryLogs           InventoryLog[]
+  session                 BotSession?
 
   @@unique([game, robloxUsername])
   @@index([game])
@@ -441,25 +456,43 @@ model BotAssignment {
 }
 
 model DeliveryJob {
-  id           String         @id @default(cuid())
-  claimId      String?        @unique
-  claim        Claim?         @relation(fields: [claimId], references: [id], onDelete: Cascade)
-  withdrawalId String?        @unique
-  withdrawal   Withdrawal?    @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
-  status       DeliveryStatus @default(QUEUED)
-  attempts     Int            @default(0)
-  lastError    String?
-  nextRetryAt  DateTime?
-  retryReason  String?
-  lockedAt     DateTime?
-  deliveredAt  DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  logs         DeliveryLog[]
+  id             String              @id @default(cuid())
+  claimId        String?             @unique
+  claim          Claim?              @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  withdrawalId   String?             @unique
+  withdrawal     Withdrawal?         @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  status         DeliveryStatus      @default(QUEUED)
+  controllerType BotControllerType   @default(MANUAL)
+  attempts       Int                 @default(0)
+  lastError      String?
+  nextRetryAt    DateTime?
+  retryReason    String?
+  lockedAt       DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  logs           DeliveryLog[]
 
   @@index([status])
+  @@index([controllerType])
   @@index([createdAt])
   @@index([lockedAt])
+}
+
+model BotSession {
+  id               String           @id @default(cuid())
+  botAccountId     String           @unique
+  botAccount       BotAccount       @relation(fields: [botAccountId], references: [id], onDelete: Cascade)
+  status           BotSessionStatus @default(IDLE)
+  currentJobId     String?
+  lastHeartbeatAt  DateTime?
+  startedAt        DateTime         @default(now())
+  metadata         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([status])
+  @@index([lastHeartbeatAt])
 }
 
 model DeliveryLog {

@@ -9,6 +9,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { syncGameBotCapacities } from "@/server/services/bot-capacity";
 import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
+import { dispatchDeliveryJob, resolveControllerType } from "@/server/bot-controller/BotControllerService";
 
 export type DeliveryItem = {
   productId: string;
@@ -264,7 +265,8 @@ export async function assignBotAndCreateDeliveryJob(
         data: {
           claimId: target.type === "claim" ? target.claimId : null,
           withdrawalId: target.type === "withdrawal" ? target.withdrawalId : null,
-          status: DeliveryStatus.WAITING_USER,
+          status: DeliveryStatus.QUEUED,
+          controllerType: resolveControllerType(),
         },
       });
 

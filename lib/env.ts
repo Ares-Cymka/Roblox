@@ -22,8 +22,16 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
   STRIPE_WEBHOOK_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
-  DELIVERY_ADAPTER: z.string().transform((v) => v.trim()).pipe(z.enum(["mock"])).default("mock"),
+  DELIVERY_ADAPTER: z
+    .string()
+    .transform((v) => v.trim())
+    .pipe(z.enum(["mock", "manual", "auto"]))
+    .default("manual"),
   DELIVERY_CONCURRENCY: z.coerce.number().int().positive().default(5),
+  // How long the mock adapter waits before marking delivered (ms). Default 3000ms.
+  BOT_MOCK_DELAY_MS: z.coerce.number().int().nonnegative().default(3000),
+  // Shared secret used to authenticate external bot callbacks and heartbeats.
+  BOT_API_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
 });
 
 export type Env = z.infer<typeof envSchema>;
