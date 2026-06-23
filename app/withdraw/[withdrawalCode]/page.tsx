@@ -86,6 +86,10 @@ const STATUS_MESSAGES: Record<string, { message: string; variant: "info" | "succ
     message: "Please enter your Roblox username below to begin the delivery process.",
     variant: "info",
   },
+  PENDING: {
+    message: "Username confirmed. Assigning your delivery bot…",
+    variant: "info",
+  },
   WAITING_FRIEND_REQUEST: {
     message: "Add the delivery bot as a Roblox friend, then click 'I Sent Friend Request' to continue.",
     variant: "info",
@@ -221,6 +225,20 @@ export default function WithdrawPage() {
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? "Failed to save username"); return; }
       setData(json);
+      if (json.startError) {
+        const shortageText = Array.isArray(json.startShortages)
+          ? json.startShortages
+              .map((e: { name: string; required: number; available: number }) =>
+                `${e.name}: need ${e.required}, available ${e.available}`)
+              .join("; ")
+          : null;
+        setError(
+          json.startHint ??
+            (shortageText
+              ? `${json.startError} (${shortageText})`
+              : json.startError)
+        );
+      }
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -325,8 +343,13 @@ export default function WithdrawPage() {
 
   const status = data.withdrawal.status;
   const isSupportRequired = status === "SUPPORT_REQUIRED";
-  const needsUsername = status === "USERNAME_REQUIRED" || status === "PENDING";
-  const canStart = status === "QUEUED" && Boolean(data.withdrawal.robloxUsername) && !data.assignment;
+  const needsUsername =
+    !data.withdrawal.robloxUsername &&
+    (status === "USERNAME_REQUIRED" || status === "PENDING");
+  const canStart =
+    (status === "PENDING" || status === "QUEUED") &&
+    Boolean(data.withdrawal.robloxUsername) &&
+    !data.assignment;
 
   const statusInfo = STATUS_MESSAGES[status];
 

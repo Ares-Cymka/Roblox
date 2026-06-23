@@ -46,6 +46,43 @@ describe("withdrawal status helpers", () => {
 
     expect(steps[index]?.id).toBe("mailbox_queued");
   });
+
+  it("shows bot assigned step after username before bot assignment", () => {
+    const steps = getWithdrawalSteps("TRADING");
+    const index = getActiveWithdrawalStepIndex(steps, {
+      withdrawalStatus: "PENDING",
+      hasUsername: true,
+      hasAssignment: false,
+      deliveryJobStatus: null,
+    });
+
+    expect(steps[index]?.id).toBe("bot_assigned");
+  });
+
+  it("shows friend request step when waiting for friend after bot assigned", () => {
+    const steps = getWithdrawalSteps("TRADING");
+    const index = getActiveWithdrawalStepIndex(steps, {
+      withdrawalStatus: "WAITING_FRIEND_REQUEST",
+      hasUsername: true,
+      hasAssignment: true,
+      assignmentStatus: "FRIEND_REQUEST_PENDING",
+      deliveryJobStatus: "QUEUED",
+    });
+
+    expect(steps[index]?.id).toBe("friend_request");
+  });
+
+  it("does not show delivery queued before bot is assigned", () => {
+    const steps = getWithdrawalSteps("TRADING");
+    const index = getActiveWithdrawalStepIndex(steps, {
+      withdrawalStatus: "QUEUED",
+      hasUsername: true,
+      hasAssignment: false,
+      deliveryJobStatus: null,
+    });
+
+    expect(steps[index]?.id).not.toBe("delivery_queued");
+  });
 });
 
 describe("botAssignmentActionSchema", () => {

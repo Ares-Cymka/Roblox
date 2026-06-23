@@ -102,9 +102,22 @@ export function getActiveWithdrawalStepIndex(
     return joinIndex >= 0 ? joinIndex : 2;
   }
 
+  // Username saved but bot not assigned yet — show "Bot assigned" as next step
   if (
-    withdrawalStatus === "QUEUED" ||
-    deliveryJobStatus === "QUEUED" ||
+    !hasAssignment &&
+    hasUsername &&
+    (withdrawalStatus === "PENDING" || withdrawalStatus === "USERNAME_REQUIRED")
+  ) {
+    const botIndex = steps.findIndex((step) => step.id === "bot_assigned");
+    return botIndex >= 0 ? botIndex : 1;
+  }
+
+  // Delivery queued — only after bot is assigned (customer finished friend/join steps)
+  if (
+    (withdrawalStatus === "QUEUED" && hasAssignment) ||
+    withdrawalStatus === "PROCESSING" ||
+    deliveryJobStatus === "PROCESSING" ||
+    (deliveryJobStatus === "QUEUED" && hasAssignment) ||
     deliveryJobStatus === "RETRYING"
   ) {
     const queuedIndex = steps.findIndex(
@@ -118,8 +131,9 @@ export function getActiveWithdrawalStepIndex(
     return botIndex >= 0 ? botIndex : 1;
   }
 
-  if (hasUsername || withdrawalStatus === "QUEUED") {
-    return 0;
+  if (hasUsername) {
+    const botIndex = steps.findIndex((step) => step.id === "bot_assigned");
+    return botIndex >= 0 ? botIndex : 1;
   }
 
   return 0;

@@ -321,7 +321,8 @@ export async function linkWithdrawalUsername(
     where: { id: withdrawal.id },
     data: {
       robloxUsername: robloxUsername.trim(),
-      status: WithdrawalStatus.QUEUED,
+      // PENDING = username saved, waiting for bot assignment (not yet in delivery queue)
+      status: WithdrawalStatus.PENDING,
     },
     include: withdrawalInclude,
   });
@@ -329,7 +330,19 @@ export async function linkWithdrawalUsername(
   const game = updated.items[0]?.product.game;
   const gameConfig = game ? await getGameDeliveryConfig(game) : null;
 
-  return formatWithdrawalResponse(updated, gameConfig);
+  // Auto-assign bot immediately after username confirmation
+  const started = await startWithdrawal(updated.id);
+  if (!("error" in started)) {
+    return started;
+  }
+
+  // Bot unavailable — return saved username so customer can retry Start Delivery
+  return {
+    ...formatWithdrawalResponse(updated, gameConfig),
+    startError: started.error,
+    startHint: "hint" in started ? started.hint : undefined,
+    startShortages: "shortages" in started ? started.shortages : undefined,
+  };
 }
 
 export async function startWithdrawal(withdrawalId: string) {
@@ -423,13 +436,15 @@ export async function startWithdrawal(withdrawalId: string) {
 
   const gameConfig = await getGameDeliveryConfig(game);
 
-  const usesTradingFlow =
-    gameConfig?.requiresFriend !== false ||
-    gameConfig?.requiresCustomerJoin !== false;
+  const isMailboxFlow =
+    gameConfig?.deliveryMethod === "MAILBOX" ||
+    (gameConfig != null &&
+      !gameConfig.requiresFriend &&
+      !gameConfig.requiresCustomerJoin);
 
-  const nextStatus = usesTradingFlow
-    ? WithdrawalStatus.WAITING_FRIEND_REQUEST
-    : WithdrawalStatus.QUEUED;
+  const nextStatus = isMailboxFlow
+    ? WithdrawalStatus.QUEUED
+    : WithdrawalStatus.WAITING_FRIEND_REQUEST;
 
   const updated = await prisma.withdrawal.update({
     where: { id: withdrawal.id },
@@ -437,7 +452,7 @@ export async function startWithdrawal(withdrawalId: string) {
     include: withdrawalInclude,
   });
 
-  if (!usesTradingFlow && updated.deliveryJob) {
+  if (isMailboxFlow && updated.deliveryJob) {
     await prisma.$transaction(async (tx) => {
       await tx.deliveryJob.update({
         where: { id: updated.deliveryJob!.id },
@@ -462,7 +477,13 @@ export async function startWithdrawal(withdrawalId: string) {
     return formatWithdrawalResponse(reloaded, gameConfig);
   }
 
-  return formatWithdrawalResponse(updated, gameConfig);
+  // Reload so MM2 session (created after assignment) is included in the response
+  const reloaded = await loadWithdrawalById(withdrawal.id);
+  if (!reloaded) {
+    return { error: "Withdrawal not found" as const };
+  }
+
+  return formatWithdrawalResponse(reloaded, gameConfig);
 }
 
 export async function getWithdrawalById(withdrawalId: string) {
