@@ -19,7 +19,7 @@ export function DeliveryJobActions({
   const [error, setError] = useState<string | null>(null);
 
   async function runAction(
-    action: "mark-delivered" | "mark-failed" | "retry",
+    action: "mark-delivered" | "mark-failed" | "retry" | "cancel-release",
     body?: Record<string, string>
   ) {
     setLoading(action);
@@ -55,11 +55,25 @@ export function DeliveryJobActions({
     await runAction("mark-failed", { reason: reason.trim() });
   }
 
+  async function handleCancelRelease() {
+    if (
+      !window.confirm(
+        "Cancel this delivery job and release the assigned bot/inventory reservation?"
+      )
+    ) {
+      return;
+    }
+    await runAction("cancel-release", {
+      reason: "Delivery cancelled and bot reservation released by admin.",
+    });
+  }
+
   const canMarkDelivered = ["QUEUED", "PROCESSING", "WAITING_USER", "RETRYING"].includes(
     status
   );
   const canMarkFailed = status !== "DELIVERED" && status !== "FAILED";
   const canRetry = status === "FAILED";
+  const canCancelRelease = status !== "DELIVERED" && status !== "CANCELLED";
 
   return (
     <div className="space-y-2">
@@ -96,6 +110,16 @@ export function DeliveryJobActions({
             onClick={() => runAction("retry")}
           >
             {loading === "retry" ? "Retrying..." : "Retry Failed"}
+          </Button>
+        )}
+        {canCancelRelease && (
+          <Button
+            type="button"
+            variant="danger"
+            disabled={loading !== null}
+            onClick={handleCancelRelease}
+          >
+            {loading === "cancel-release" ? "Releasing..." : "Cancel / Release"}
           </Button>
         )}
       </div>

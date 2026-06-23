@@ -1,6 +1,7 @@
 import {
   BotAssignmentStatus,
   BotStatus,
+  ClaimStatus,
   CustomerInventoryLogReason,
   DeliveryMethod,
   DeliveryStatus,
@@ -9,7 +10,10 @@ import {
   WithdrawalStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { syncBotCurrentDeliveries } from "@/server/services/bot-capacity";
+import {
+  releaseBotAssignmentCapacity,
+  syncBotCurrentDeliveries,
+} from "@/server/services/bot-capacity";
 import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
 import { formatMM2Session } from "@/server/services/mm2-delivery";
 
@@ -1016,6 +1020,108 @@ export async function expireSingleWithdrawal(deliveryJobId: string) {
   const expired = await loadDeliveryJob(deliveryJobId);
   if (!expired) return { error: "Delivery job not found" as const };
   return formatDeliveryJobDetail(expired);
+}
+
+export async function cancelAndReleaseDeliveryJob(
+  deliveryJobId: string,
+  reason = "Delivery cancelled and bot reservation released by admin."
+) {
+  const job = await loadDeliveryJob(deliveryJobId);
+  if (!job) return { error: "Delivery job not found" as const };
+
+  if (job.status === DeliveryStatus.DELIVERED) {
+    return { error: "Cannot cancel a delivered job" as const };
+  }
+
+  const assignment = getAssignmentFromJob(job);
+  const withdrawal = job.withdrawal;
+  const claim = job.claim;
+
+  if (job.status === DeliveryStatus.CANCELLED) {
+    return formatDeliveryJobDetail(job);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.deliveryJob.update({
+      where: { id: deliveryJobId },
+      data: {
+        status: DeliveryStatus.CANCELLED,
+        lastError: reason,
+        lockedAt: null,
+        nextRetryAt: null,
+        retryReason: null,
+      },
+    });
+
+    if (withdrawal) {
+      await tx.withdrawal.update({
+        where: { id: withdrawal.id },
+        data: { status: WithdrawalStatus.CANCELLED },
+      });
+
+      for (const item of withdrawal.items) {
+        const inventory = await tx.customerInventory.findFirst({
+          where: {
+            productId: item.productId,
+            OR: [
+              withdrawal.customerId ? { customerId: withdrawal.customerId } : undefined,
+              withdrawal.sessionId ? { sessionId: withdrawal.sessionId } : undefined,
+            ].filter(Boolean) as Prisma.CustomerInventoryWhereInput[],
+          },
+        });
+
+        if (!inventory) continue;
+
+        await tx.customerInventory.update({
+          where: { id: inventory.id },
+          data: {
+            reservedQuantity: Math.max(
+              0,
+              inventory.reservedQuantity - item.quantity
+            ),
+          },
+        });
+
+        await tx.customerInventoryLog.create({
+          data: {
+            customerId: withdrawal.customerId ?? null,
+            sessionId: withdrawal.customerId ? null : (withdrawal.sessionId ?? null),
+            productId: item.productId,
+            delta: item.quantity,
+            reason: CustomerInventoryLogReason.WITHDRAW_CANCELLED,
+          },
+        });
+      }
+    }
+
+    if (claim) {
+      await tx.claim.update({
+        where: { id: claim.id },
+        data: { status: ClaimStatus.CANCELLED },
+      });
+    }
+
+    await tx.deliveryLog.create({
+      data: {
+        deliveryJobId,
+        withdrawalId: withdrawal?.id ?? null,
+        claimId: claim?.id ?? null,
+        level: "WARN",
+        message: reason,
+      },
+    });
+  });
+
+  if (assignment) {
+    await releaseBotAssignmentCapacity(
+      assignment.id,
+      BotAssignmentStatus.CANCELLED
+    );
+  }
+
+  const cancelled = await loadDeliveryJob(deliveryJobId);
+  if (!cancelled) return { error: "Delivery job not found" as const };
+  return formatDeliveryJobDetail(cancelled);
 }
 
 export async function listDeliveryJobsFiltered(params: {
