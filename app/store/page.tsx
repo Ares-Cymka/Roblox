@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
+import { ProductImagePlaceholder } from "@/components/ui/ProductPlaceholder";
 
 interface StoreProduct {
   id: string;
@@ -360,17 +361,13 @@ export default function StorePage() {
                     <div className="flex flex-wrap items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
                         {/* Item thumbnail */}
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-rbx bg-rbx-border/40 text-xl overflow-hidden">
-                          {product.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={product.imageUrl}
-                              alt={product.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span>{selectedGameMeta?.emoji ?? "🎮"}</span>
-                          )}
+                        <div className="flex h-12 w-12 shrink-0 rounded-rbx overflow-hidden">
+                          <ProductImagePlaceholder
+                            name={product.name}
+                            game={product.game}
+                            imageUrl={product.imageUrl}
+                            className="h-12 w-12"
+                          />
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-rbx-text truncate">{product.name}</p>

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const gameColors: Record<string, string> = {
@@ -23,23 +26,15 @@ interface ProductImagePlaceholderProps {
   className?: string;
 }
 
-export function ProductImagePlaceholder({
+function ProductFallback({
   name,
-  game = "OTHER",
-  imageUrl,
+  game,
   className,
-}: ProductImagePlaceholderProps) {
-  if (imageUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={imageUrl}
-        alt={name}
-        className={cn("object-cover", className)}
-      />
-    );
-  }
-
+}: {
+  name: string;
+  game: string;
+  className?: string;
+}) {
   const gradient = gameColors[game] ?? gameColors.OTHER;
   const icon = gameIcons[game] ?? "🎮";
   const initials = name
@@ -62,6 +57,29 @@ export function ProductImagePlaceholder({
       </span>
     </div>
   );
+}
+
+export function ProductImagePlaceholder({
+  name,
+  game = "OTHER",
+  imageUrl,
+  className,
+}: ProductImagePlaceholderProps) {
+  const [imgError, setImgError] = useState(false);
+
+  if (imageUrl && !imgError) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imageUrl}
+        alt={name}
+        className={cn("object-cover", className)}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  return <ProductFallback name={name} game={game} className={className} />;
 }
 
 /** Return CSS classes for a game badge */
