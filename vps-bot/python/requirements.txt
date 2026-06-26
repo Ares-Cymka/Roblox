@@ -1,0 +1,10 @@
+# Python 3.10+ required
+pyautogui==0.9.54
+opencv-python==4.9.0.80
+Pillow==10.3.0
+mss==9.0.1
+pywin32==306
+pytesseract==0.3.10
+numpy==1.26.4
+requests==2.32.3
+python-dotenv==1.0.1
