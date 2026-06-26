@@ -83,6 +83,19 @@ describe("withdrawal status helpers", () => {
 
     expect(steps[index]?.id).not.toBe("delivery_queued");
   });
+
+  it("marks all steps complete when delivered", () => {
+    const steps = getWithdrawalSteps("TRADING");
+    const index = getActiveWithdrawalStepIndex(steps, {
+      withdrawalStatus: "DELIVERED",
+      hasUsername: true,
+      hasAssignment: true,
+      assignmentStatus: "COMPLETED",
+      deliveryJobStatus: "DELIVERED",
+    });
+
+    expect(index).toBe(steps.length);
+  });
 });
 
 describe("botAssignmentActionSchema", () => {

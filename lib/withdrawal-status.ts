@@ -64,8 +64,9 @@ export function getActiveWithdrawalStepIndex(
   const { withdrawalStatus, hasUsername, hasAssignment, assignmentStatus, deliveryJobStatus } =
     input;
 
+  // Past the last step so every step (including "Delivered") renders as complete.
   if (withdrawalStatus === "DELIVERED") {
-    return steps.length - 1;
+    return steps.length;
   }
 
   if (withdrawalStatus === "PROCESSING" || deliveryJobStatus === "PROCESSING") {

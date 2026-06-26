@@ -49,7 +49,10 @@ const STEPS = [
 ] as const;
 
 function getActiveStep(sessionStatus: string, withdrawalStatus: string): number {
-  if (withdrawalStatus === "DELIVERED" || sessionStatus === "DELIVERED") return 7;
+  // One past the last step so "Delivered" shows a green check, not blue "active".
+  if (withdrawalStatus === "DELIVERED" || sessionStatus === "DELIVERED") {
+    return STEPS.length + 1;
+  }
   if (sessionStatus === "TRADE_SENT" || sessionStatus === "TRADE_ACCEPTED") return 5;
   if (
     sessionStatus === "CUSTOMER_IN_SERVER" ||
