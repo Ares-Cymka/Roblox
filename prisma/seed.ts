@@ -111,6 +111,8 @@ async function main() {
 
   console.log(`Admin user ready: ${adminUser.email}`);
 
+  const privateServerUrl = process.env.BOT_PRIVATE_SERVER_URL?.trim() || null;
+
   const botAccount = await prisma.botAccount.upsert({
     where: {
       game_robloxUsername: {
@@ -123,17 +125,22 @@ async function main() {
       maxConcurrentDeliveries: 1,
       currentDeliveries: 0,
       profileUrl: "https://www.roblox.com/users/search?keyword=radiomirrorq",
+      ...(privateServerUrl ? { privateServerUrl } : {}),
     },
     create: {
       game: GameType.MM2,
       robloxUsername: "radiomirrorq",
       profileUrl: "https://www.roblox.com/users/search?keyword=radiomirrorq",
+      privateServerUrl,
       status: BotStatus.ONLINE,
       maxConcurrentDeliveries: 1,
       currentDeliveries: 0,
     },
   });
   console.log(`MM2 bot account ready: ${botAccount.robloxUsername} (${botAccount.status})`);
+  if (privateServerUrl) {
+    console.log(`MM2 private server URL set from BOT_PRIVATE_SERVER_URL`);
+  }
 
   // Placeholder bots for SAB, ADOPT_ME, GAG2 (OFFLINE by default — admin sets ONLINE when ready)
   const placeholderBots = [

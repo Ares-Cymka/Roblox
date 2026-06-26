@@ -32,6 +32,15 @@ const envSchema = z.object({
   BOT_MOCK_DELAY_MS: z.coerce.number().int().nonnegative().default(3000),
   // Shared secret used to authenticate external bot callbacks and heartbeats.
   BOT_API_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
+  // Roblox private server invite for the MM2 delivery bot (seed/admin sync).
+  BOT_PRIVATE_SERVER_URL: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim() || undefined)
+    .refine(
+      (v) => !v || v.startsWith("http://") || v.startsWith("https://"),
+      "BOT_PRIVATE_SERVER_URL must be a valid URL"
+    ),
 });
 
 export type Env = z.infer<typeof envSchema>;
