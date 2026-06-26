@@ -19,7 +19,16 @@ const prisma = new PrismaClient();
 const MM2_BOT_USERNAME = "radiomirrorq";
 const TEST_CUSTOMER_CODE = "TESTPLAYER";
 const BOT_STOCK_QTY = 10;
-const TEST_ITEM_ITEM_ID = "22"; // Celestial — $150, under $200 withdrawal limit
+
+/** MM2 items restocked for TESTPLAYER on each `npm run seed:mm2-testing` run. */
+const TEST_CUSTOMER_ITEMS: Array<{ itemId: string; quantity: number; note?: string }> = [
+  { itemId: "1", quantity: 3, note: "$10 — quick small withdrawal" },
+  { itemId: "15", quantity: 2, note: "$5 Batwing — cheapest tier" },
+  { itemId: "179", quantity: 2, note: "$30 Raygun — mid-low tier" },
+  { itemId: "8", quantity: 2, note: "$60 Alien Beam — mid tier" },
+  { itemId: "22", quantity: 3, note: "$150 Celestial — under $200 limit" },
+  { itemId: "58", quantity: 1, note: "$200 Darksword — at withdrawal limit" },
+];
 
 const MM2_INSTRUCTIONS =
   "Join the assigned bot's MM2 private server and wait in the lobby. The delivery bot will send you a trade request. Only accept a trade from the assigned bot username.";
@@ -220,39 +229,46 @@ async function seedTestCustomerInventory() {
     },
   });
 
-  const celestial = await prisma.product.findUnique({
-    where: {
-      game_itemId: { game: GameType.MM2, itemId: TEST_ITEM_ITEM_ID },
-    },
-  });
+  console.log(`Test customer ${TEST_CUSTOMER_CODE}:`);
 
-  if (!celestial) {
-    throw new Error("Celestial (itemId 22) not found — catalog import failed.");
-  }
-
-  const existing = await prisma.customerInventory.findFirst({
-    where: { customerId: customer.id, productId: celestial.id },
-  });
-
-  if (existing) {
-    await prisma.customerInventory.update({
-      where: { id: existing.id },
-      data: { quantity: 1, reservedQuantity: 0 },
-    });
-  } else {
-    await prisma.customerInventory.create({
-      data: {
-        customerId: customer.id,
-        productId: celestial.id,
-        quantity: 1,
-        reservedQuantity: 0,
+  for (const entry of TEST_CUSTOMER_ITEMS) {
+    const product = await prisma.product.findUnique({
+      where: {
+        game_itemId: { game: GameType.MM2, itemId: entry.itemId },
       },
     });
+
+    if (!product) {
+      throw new Error(
+        `Product itemId ${entry.itemId} not found — catalog import failed.`
+      );
+    }
+
+    const existing = await prisma.customerInventory.findFirst({
+      where: { customerId: customer.id, productId: product.id },
+    });
+
+    if (existing) {
+      await prisma.customerInventory.update({
+        where: { id: existing.id },
+        data: { quantity: entry.quantity, reservedQuantity: 0 },
+      });
+    } else {
+      await prisma.customerInventory.create({
+        data: {
+          customerId: customer.id,
+          productId: product.id,
+          quantity: entry.quantity,
+          reservedQuantity: 0,
+        },
+      });
+    }
+
+    const valueLabel = product.value != null ? `$${product.value}` : "no value";
+    const note = entry.note ? ` — ${entry.note}` : "";
+    console.log(`  ${entry.quantity}x ${product.name} (${valueLabel})${note}`);
   }
 
-  console.log(
-    `Test customer ${TEST_CUSTOMER_CODE}: 1x ${celestial.name} ($${celestial.value}) ready to withdraw`
-  );
   console.log(`Open /inventory and lookup code: ${TEST_CUSTOMER_CODE}`);
 }
 
