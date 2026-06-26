@@ -11,6 +11,7 @@ import { syncGameBotCapacities } from "@/server/services/bot-capacity";
 import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
 import { dispatchDeliveryJob, resolveControllerType } from "@/server/bot-controller/BotControllerService";
 import { createMM2Session } from "@/server/services/mm2-delivery";
+import { isBotLive, syncStaleBotsOffline } from "@/server/services/bot-presence";
 
 export type DeliveryItem = {
   productId: string;
@@ -40,7 +41,7 @@ export type BotCandidate = {
 };
 
 type BotWithInventory = Prisma.BotAccountGetPayload<{
-  include: { inventories: true };
+  include: { inventories: true; session: true };
 }>;
 
 export function getAvailableInventory(
@@ -73,7 +74,7 @@ export function selectEligibleBot(
   const eligible = bots
     .filter(
       (bot) =>
-        bot.status === BotStatus.ONLINE &&
+        (bot.status === BotStatus.ONLINE || bot.status === BotStatus.BUSY) &&
         bot.currentDeliveries < bot.maxConcurrentDeliveries &&
         botHasSufficientInventory(bot.inventories, requiredItems)
     )
@@ -89,7 +90,7 @@ export function getInventoryShortages(
 ) {
   const onlineWithCapacity = bots.filter(
     (bot) =>
-      bot.status === BotStatus.ONLINE &&
+      (bot.status === BotStatus.ONLINE || bot.status === BotStatus.BUSY) &&
       bot.currentDeliveries < bot.maxConcurrentDeliveries
   );
 
@@ -134,18 +135,21 @@ export async function findEligibleBot(
   }>;
 }> {
   await syncGameBotCapacities(game);
+  await syncStaleBotsOffline(game);
 
   const bots = await prisma.botAccount.findMany({
-    where: { game, status: BotStatus.ONLINE },
-    include: { inventories: true },
+    where: { game, status: { in: [BotStatus.ONLINE, BotStatus.BUSY] } },
+    include: { inventories: true, session: true },
     orderBy: [{ currentDeliveries: "asc" }, { robloxUsername: "asc" }],
   });
 
-  if (bots.length === 0) {
+  const liveBots = bots.filter(isBotLive);
+
+  if (liveBots.length === 0) {
     return { bot: null, error: "No bot available" };
   }
 
-  const botsWithCapacity = bots.filter(
+  const botsWithCapacity = liveBots.filter(
     (bot) => bot.currentDeliveries < bot.maxConcurrentDeliveries
   );
 

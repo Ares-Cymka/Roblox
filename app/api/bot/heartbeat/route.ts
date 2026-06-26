@@ -16,6 +16,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isBotAuthorized } from "@/lib/bot-auth";
+import { recordBotHeartbeat } from "@/server/services/bot-presence";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -51,22 +52,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const session = await prisma.botSession.upsert({
-    where: { botAccountId: bot.id },
-    update: {
-      status,
-      currentJobId: currentJobId ?? null,
-      lastHeartbeatAt: new Date(),
-      metadata: metadata as object ?? undefined,
-    },
-    create: {
-      botAccountId: bot.id,
-      status,
-      currentJobId: currentJobId ?? null,
-      lastHeartbeatAt: new Date(),
-      metadata: metadata as object ?? undefined,
-    },
+  await recordBotHeartbeat({
+    botAccountId: bot.id,
+    sessionStatus: status,
+    currentJobId: currentJobId ?? null,
+    metadata,
   });
+
+  const session = await prisma.botSession.findUnique({
+    where: { botAccountId: bot.id },
+  });
+
+  if (!session) {
+    return NextResponse.json({ error: "Failed to record heartbeat" }, { status: 500 });
+  }
 
   return NextResponse.json({
     success: true,

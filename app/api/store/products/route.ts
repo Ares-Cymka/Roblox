@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { BotStatus } from "@prisma/client";
+import { isBotLive, syncStaleBotsOffline } from "@/server/services/bot-presence";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    await syncStaleBotsOffline();
+
     const products = await prisma.product.findMany({
       where: {
         value: { not: null, gt: 0 },
@@ -22,11 +25,19 @@ export async function GET() {
         imageUrl: true,
         botInventories: {
           where: {
-            botAccount: { status: BotStatus.ONLINE },
+            botAccount: {
+              status: { in: [BotStatus.ONLINE, BotStatus.BUSY] },
+            },
           },
           select: {
             quantity: true,
             reservedQuantity: true,
+            botAccount: {
+              select: {
+                status: true,
+                session: { select: { lastHeartbeatAt: true } },
+              },
+            },
           },
         },
       },
@@ -34,11 +45,13 @@ export async function GET() {
 
     const inStock = products
       .map((product) => {
-        const stock = product.botInventories.reduce(
-          (sum, entry) =>
-            sum + Math.max(0, entry.quantity - entry.reservedQuantity),
-          0
-        );
+        const stock = product.botInventories
+          .filter((entry) => isBotLive(entry.botAccount))
+          .reduce(
+            (sum, entry) =>
+              sum + Math.max(0, entry.quantity - entry.reservedQuantity),
+            0
+          );
 
         return {
           id: product.id,
