@@ -228,7 +228,7 @@ export async function markBotTradeDetected(
         input?.proofText ??
         "[BOT] Trade acceptance detected — customer received items from bot.",
       metadata: input?.detectedItems
-        ? ({ detectedItems: input.detectedItems } as Prisma.InputJsonValue)
+        ? (JSON.parse(JSON.stringify({ detectedItems: input.detectedItems })) as Prisma.InputJsonValue)
         : undefined,
     },
   });
@@ -301,7 +301,7 @@ export async function confirmBotTradeDelivery(
       proofText: input?.proofText ?? null,
       proofImageUrl: input?.proofImageUrl ?? null,
       metadata: input?.detectedItems
-        ? ({ detectedItems: input.detectedItems } as Prisma.InputJsonValue)
+        ? (JSON.parse(JSON.stringify({ detectedItems: input.detectedItems })) as Prisma.InputJsonValue)
         : undefined,
     },
   });

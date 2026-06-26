@@ -45,8 +45,9 @@ export async function POST(
 
   const result = await confirmBotTradeDelivery(params.jobId, parsed.data);
   if ("error" in result) {
-    const status = result.error.includes("not found") ? 404 : 400;
-    return NextResponse.json({ error: result.error }, { status });
+    const message = result.error ?? "Delivery confirmation failed";
+    const status = message.includes("not found") ? 404 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 
   return NextResponse.json({

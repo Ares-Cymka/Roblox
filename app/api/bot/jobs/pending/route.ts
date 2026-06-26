@@ -59,22 +59,19 @@ export async function GET(request: Request) {
     take: limit,
   });
 
-  const summaries = jobs
-    .map((job) => {
+  const summaries: PendingJobSummary[] = jobs.flatMap((job) => {
       const withdrawal = job.withdrawal;
       const claim = job.claim;
       const assignment =
         withdrawal?.botAssignments[0] ?? claim?.botAssignments[0];
-      if (!assignment) return null;
-
+      if (!assignment) return [];
       const robloxUsername = withdrawal?.robloxUsername ?? claim?.robloxUsername;
-      if (!robloxUsername) return null;
-
+      if (!robloxUsername) return [];
       const firstProduct =
         withdrawal?.items[0]?.product ?? claim?.items[0]?.product;
       const game = (firstProduct?.game ?? "OTHER") as GameType;
 
-      if (gameFilter && game !== gameFilter) return null;
+      if (gameFilter && game !== gameFilter) return [];
 
       const items =
         withdrawal?.items.map((wi) => ({
@@ -93,7 +90,7 @@ export async function GET(request: Request) {
         })) ??
         [];
 
-      return {
+      return [{
         jobId: job.id,
         withdrawalId: job.withdrawalId,
         claimId: job.claimId,
@@ -106,9 +103,8 @@ export async function GET(request: Request) {
         privateServerUrl: assignment.botAccount.privateServerUrl,
         items,
         queuedAt: job.createdAt.toISOString(),
-      } satisfies PendingJobSummary;
-    })
-    .filter((s): s is PendingJobSummary => s !== null);
+      }];
+    });
 
   return NextResponse.json({ jobs: summaries });
 }
