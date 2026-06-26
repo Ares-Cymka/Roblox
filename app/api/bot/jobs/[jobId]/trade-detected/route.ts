@@ -1,13 +1,15 @@
 /**
- * POST /api/bot/jobs/[jobId]/complete
+ * POST /api/bot/jobs/[jobId]/trade-detected
  *
- * Bot agent confirms the customer received the item(s) from the bot.
- * Requires detectedItems unless requireDetection=false (admin override).
+ * Bot agent reports that the customer accepted the in-game trade on screen.
+ * Moves the MM2 session to TRADE_ACCEPTED so the customer UI can update.
+ *
+ * Authentication: Bearer <BOT_API_SECRET>
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isBotAuthorized } from "@/lib/bot-auth";
-import { confirmBotTradeDelivery } from "@/server/services/bot-delivery";
+import { markBotTradeDetected } from "@/server/services/bot-delivery";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +24,6 @@ const bodySchema = z.object({
     )
     .optional(),
   proofText: z.string().optional(),
-  proofImageUrl: z.string().url().optional(),
-  requireDetection: z.boolean().optional(),
 });
 
 export async function POST(
@@ -43,15 +43,10 @@ export async function POST(
     );
   }
 
-  const result = await confirmBotTradeDelivery(params.jobId, parsed.data);
+  const result = await markBotTradeDetected(params.jobId, parsed.data);
   if ("error" in result) {
-    const status = result.error.includes("not found") ? 404 : 400;
-    return NextResponse.json({ error: result.error }, { status });
+    return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  return NextResponse.json({
-    success: true,
-    jobId: params.jobId,
-    status: result.status,
-  });
+  return NextResponse.json({ ok: true, status: result.status });
 }

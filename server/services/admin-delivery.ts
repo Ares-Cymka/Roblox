@@ -6,6 +6,7 @@ import {
   DeliveryMethod,
   DeliveryStatus,
   GameType,
+  MM2SessionStatus,
   Prisma,
   WithdrawalStatus,
 } from "@prisma/client";
@@ -422,6 +423,24 @@ export async function markDeliveryJobDelivered(deliveryJobId: string) {
         message: "Admin marked delivery completed.",
       },
     });
+
+    const mm2Session = await tx.mM2DeliverySession.findUnique({
+      where: { withdrawalId: withdrawal.id },
+    });
+    if (
+      mm2Session &&
+      mm2Session.status !== MM2SessionStatus.DELIVERED &&
+      mm2Session.status !== MM2SessionStatus.FAILED &&
+      mm2Session.status !== MM2SessionStatus.EXPIRED
+    ) {
+      await tx.mM2DeliverySession.update({
+        where: { id: mm2Session.id },
+        data: {
+          status: MM2SessionStatus.DELIVERED,
+          tradeCompletedAt: new Date(),
+        },
+      });
+    }
 
     const bot = await tx.botAccount.findUnique({ where: { id: botAccountId } });
     if (bot && bot.currentDeliveries > 0) {

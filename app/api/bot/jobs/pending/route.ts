@@ -41,6 +41,7 @@ export async function GET(request: Request) {
             orderBy: { createdAt: "desc" },
             take: 1,
           },
+          mm2Session: true,
         },
       },
       claim: {
@@ -78,12 +79,14 @@ export async function GET(request: Request) {
       const items =
         withdrawal?.items.map((wi) => ({
           productId: wi.productId,
+          itemId: wi.product.itemId,
           name: wi.product.name,
           quantity: wi.quantity,
           unitValue: wi.unitValue ? Number(wi.unitValue) : 0,
         })) ??
         claim?.items.map((ci) => ({
           productId: ci.productId,
+          itemId: ci.product.itemId,
           name: ci.product.name,
           quantity: ci.quantity,
           unitValue: 0,
@@ -94,6 +97,8 @@ export async function GET(request: Request) {
         jobId: job.id,
         withdrawalId: job.withdrawalId,
         claimId: job.claimId,
+        withdrawalCode: withdrawal?.withdrawalCode ?? null,
+        mm2SessionId: withdrawal?.mm2Session?.id ?? null,
         game,
         deliveryMethod: "TRADING",
         customerRobloxUsername: robloxUsername,

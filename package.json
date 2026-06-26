@@ -23,6 +23,7 @@
     "import:products": "tsx scripts/import-products.ts",
     "sync:bot-inventory": "tsx scripts/sync-bot-inventory.ts",
     "sync:bot-private-server": "tsx scripts/sync-bot-private-server.ts",
+    "sync:bot-item": "tsx scripts/sync-bot-item.ts",
     "seed:mm2-testing": "tsx scripts/seed-mm2-testing.ts"
   },
   "dependencies": {

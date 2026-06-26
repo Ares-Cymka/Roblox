@@ -73,12 +73,18 @@ export type PendingJobSummary = {
   jobId: string;
   withdrawalId: string | null;
   claimId: string | null;
+  withdrawalCode?: string | null;
+  mm2SessionId?: string | null;
   game: GameType;
   deliveryMethod: string;
   customerRobloxUsername: string;
   botRobloxUsername: string;
   privateServerUrl: string | null;
-  items: DeliveryItem[];
+  items: Array<
+    DeliveryItem & {
+      itemId?: string;
+    }
+  >;
   queuedAt: string;
 };
 

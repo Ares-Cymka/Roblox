@@ -15,8 +15,10 @@ interface StoreProduct {
   id: string;
   name: string;
   game: string;
+  itemId?: string;
   rarity: string | null;
   price: number;
+  stock: number;
   imageUrl?: string | null;
 }
 
@@ -200,9 +202,11 @@ export default function StorePage() {
   );
 
   function updateQuantity(productId: string, quantity: number) {
+    const product = products.find((entry) => entry.id === productId);
+    const maxQty = product?.stock ?? 99;
     setCart((current) => ({
       ...current,
-      [productId]: Math.max(0, Math.min(99, quantity)),
+      [productId]: Math.max(0, Math.min(maxQty, quantity)),
     }));
   }
 
@@ -257,7 +261,7 @@ export default function StorePage() {
 
       <PageHeader
         title="RNGBLOX Store"
-        description="Purchase items with Stripe test checkout. Inventory credits after payment."
+        description="Purchase in-stock MM2 items from our delivery bots. Inventory credits after payment."
       />
 
       <div className="mx-auto max-w-4xl space-y-6">
@@ -350,6 +354,7 @@ export default function StorePage() {
             <ul className="space-y-3">
               {filteredProducts.map((product) => {
                 const qty = cart[product.id] ?? 0;
+                const atMax = qty >= product.stock;
                 return (
                   <li
                     key={product.id}
@@ -385,6 +390,9 @@ export default function StorePage() {
                             <span className="text-sm font-semibold text-rbx-green">
                               ${product.price.toFixed(2)}
                             </span>
+                            <span className="text-xs text-rbx-muted">
+                              {product.stock} in stock
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -407,7 +415,8 @@ export default function StorePage() {
                           type="button"
                           aria-label="Increase quantity"
                           onClick={() => updateQuantity(product.id, qty + 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-rbx border-2 border-rbx-border bg-rbx-surface font-bold text-rbx-muted transition hover:border-rbx-blue hover:text-rbx-blue"
+                          disabled={atMax}
+                          className="flex h-8 w-8 items-center justify-center rounded-rbx border-2 border-rbx-border bg-rbx-surface font-bold text-rbx-muted transition hover:border-rbx-blue hover:text-rbx-blue disabled:opacity-40"
                         >
                           +
                         </button>
