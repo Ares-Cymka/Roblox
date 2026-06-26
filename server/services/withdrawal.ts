@@ -195,7 +195,7 @@ export function formatWithdrawalResponse(
     queuePosition: queueInfo?.queuePosition ?? null,
     estimatedWaitMinutes: queueInfo?.estimatedWaitMinutes ?? null,
     mm2Session: withdrawal.mm2Session
-      ? formatMM2Session(withdrawal.mm2Session)
+      ? formatMM2Session(withdrawal.mm2Session, withdrawal.status)
       : null,
   };
 }

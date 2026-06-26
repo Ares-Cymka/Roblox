@@ -39,16 +39,27 @@ export function WithdrawalStepIndicator({
 
   return (
     <div className="py-2">
-      {/* Desktop: horizontal */}
-      <ol className="hidden sm:flex items-start gap-0">
+      {/* Desktop: horizontal — connector sits on the circle row, labels below */}
+      <ol className="hidden sm:flex w-full">
         {steps.map((step, index) => {
           const isComplete = index < activeIndex;
           const isActive = index === activeIndex;
           const isLast = index === steps.length - 1;
 
           return (
-            <li key={step.id} className="flex flex-1 items-center">
-              <div className="flex flex-col items-center">
+            <li
+              key={step.id}
+              className={cn(
+                "flex min-w-0 flex-col items-center",
+                !isLast && "flex-1"
+              )}
+            >
+              <div
+                className={cn(
+                  "flex w-full items-center",
+                  isLast && "justify-center"
+                )}
+              >
                 <div
                   className={cn(
                     "step-circle",
@@ -65,29 +76,29 @@ export function WithdrawalStepIndicator({
                 >
                   {isComplete ? checkIcon : isFailed && isActive ? failIcon : index + 1}
                 </div>
-                <span
-                  className={cn(
-                    "mt-1.5 max-w-[72px] text-center text-[10px] font-bold leading-tight uppercase tracking-wide",
-                    isComplete
-                      ? "text-rbx-green"
-                      : isActive
-                        ? isFailed
-                          ? "text-rbx-red"
-                          : "text-rbx-blue"
-                        : "text-rbx-dim"
-                  )}
-                >
-                  {step.label}
-                </span>
+                {!isLast && (
+                  <div
+                    className={cn(
+                      "mx-1 h-0.5 flex-1 self-center",
+                      isComplete ? "bg-rbx-green" : "bg-rbx-border"
+                    )}
+                  />
+                )}
               </div>
-              {!isLast && (
-                <div
-                  className={cn(
-                    "mb-5 h-0.5 flex-1 mx-1",
-                    isComplete ? "bg-rbx-green" : "bg-rbx-border"
-                  )}
-                />
-              )}
+              <span
+                className={cn(
+                  "mt-1.5 max-w-[72px] text-center text-[10px] font-bold leading-tight uppercase tracking-wide",
+                  isComplete
+                    ? "text-rbx-green"
+                    : isActive
+                      ? isFailed
+                        ? "text-rbx-red"
+                        : "text-rbx-blue"
+                      : "text-rbx-dim"
+                )}
+              >
+                {step.label}
+              </span>
             </li>
           );
         })}

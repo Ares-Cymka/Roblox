@@ -477,7 +477,8 @@ export async function mm2TradeFailed(
 // Utility: format session for API response
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function formatMM2Session(session: {
+export function formatMM2Session(
+  session: {
   id: string;
   withdrawalId: string;
   botAccountId: string;
@@ -491,14 +492,22 @@ export function formatMM2Session(session: {
   tradeFailedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-}) {
+  },
+  withdrawalStatus?: string
+) {
+  const effectiveStatus =
+    withdrawalStatus === WithdrawalStatus.DELIVERED &&
+    session.status !== MM2SessionStatus.DELIVERED
+      ? MM2SessionStatus.DELIVERED
+      : session.status;
+
   return {
     id: session.id,
     withdrawalId: session.withdrawalId,
     botAccountId: session.botAccountId,
     customerRobloxUsername: session.customerRobloxUsername,
     privateServerUrl: session.privateServerUrl,
-    status: session.status,
+    status: effectiveStatus,
     customerJoinedAt: session.customerJoinedAt?.toISOString() ?? null,
     operatorReadyAt: session.operatorReadyAt?.toISOString() ?? null,
     tradeStartedAt: session.tradeStartedAt?.toISOString() ?? null,
@@ -506,7 +515,7 @@ export function formatMM2Session(session: {
     tradeFailedAt: session.tradeFailedAt?.toISOString() ?? null,
     createdAt: session.createdAt.toISOString(),
     updatedAt: session.updatedAt.toISOString(),
-    statusMessage: MM2_STATUS_MESSAGES[session.status] ?? null,
+    statusMessage: MM2_STATUS_MESSAGES[effectiveStatus] ?? null,
   };
 }
 

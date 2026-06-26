@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Alert";
+import { cn } from "@/lib/utils";
 
 interface MM2Session {
   id: string;
@@ -79,51 +80,107 @@ function MM2Steps({
     withdrawalStatus === "EXPIRED";
 
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-0">
-      {STEPS.map((step, index) => {
-        const stepNum = index + 1;
-        const done = stepNum < active;
-        const current = stepNum === active;
-        const isFailed = failed && current;
+    <>
+      {/* Desktop: horizontal stepper with connectors aligned to circles */}
+      <div className="hidden w-full sm:flex">
+        {STEPS.map((step, index) => {
+          const stepNum = index + 1;
+          const done = stepNum < active;
+          const current = stepNum === active;
+          const isFailed = failed && current;
+          const isLast = index === STEPS.length - 1;
 
-        return (
-          <div key={step.key} className="flex items-center sm:flex-1">
-            <div className="flex items-center gap-2 sm:flex-col sm:items-center sm:gap-1 sm:flex-1">
+          return (
+            <div
+              key={step.key}
+              className={cn(
+                "flex min-w-0 flex-col items-center",
+                !isLast && "flex-1"
+              )}
+            >
               <div
-                className={[
-                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                  done
-                    ? "bg-rbx-green text-white"
-                    : isFailed
-                      ? "bg-rbx-red text-white"
-                      : current
-                        ? "bg-rbx-blue text-white ring-2 ring-rbx-blue/30"
-                        : "bg-rbx-elevated text-rbx-muted",
-                ].join(" ")}
+                className={cn(
+                  "flex w-full items-center",
+                  isLast && "justify-center"
+                )}
               >
-                {done ? "✓" : isFailed ? "✗" : stepNum}
+                <div
+                  className={cn(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                    done
+                      ? "bg-rbx-green text-white"
+                      : isFailed
+                        ? "bg-rbx-red text-white"
+                        : current
+                          ? "bg-rbx-blue text-white ring-2 ring-rbx-blue/30"
+                          : "bg-rbx-elevated text-rbx-muted"
+                  )}
+                >
+                  {done ? "✓" : isFailed ? "✗" : stepNum}
+                </div>
+                {!isLast && (
+                  <div
+                    className={cn(
+                      "mx-1 h-0.5 flex-1 self-center",
+                      done ? "bg-rbx-green" : "bg-rbx-elevated"
+                    )}
+                  />
+                )}
               </div>
               <span
-                className={[
-                  "text-[11px] font-semibold",
-                  done || current ? "text-rbx-text" : "text-rbx-muted",
-                ].join(" ")}
+                className={cn(
+                  "mt-1 max-w-[64px] text-center text-[11px] font-semibold leading-tight",
+                  done || current ? "text-rbx-text" : "text-rbx-muted"
+                )}
               >
                 {step.label}
               </span>
             </div>
-            {index < STEPS.length - 1 && (
-              <div
-                className={[
-                  "hidden sm:block h-0.5 flex-1 mx-1",
-                  done ? "bg-rbx-green" : "bg-rbx-elevated",
-                ].join(" ")}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+
+      {/* Mobile: vertical list */}
+      <div className="flex flex-col gap-3 sm:hidden">
+        {STEPS.map((step, index) => {
+          const stepNum = index + 1;
+          const done = stepNum < active;
+          const current = stepNum === active;
+          const isFailed = failed && current;
+          const isLast = index === STEPS.length - 1;
+
+          return (
+            <div key={step.key} className="flex items-start gap-3">
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                    done
+                      ? "bg-rbx-green text-white"
+                      : isFailed
+                        ? "bg-rbx-red text-white"
+                        : current
+                          ? "bg-rbx-blue text-white ring-2 ring-rbx-blue/30"
+                          : "bg-rbx-elevated text-rbx-muted"
+                  )}
+                >
+                  {done ? "✓" : isFailed ? "✗" : stepNum}
+                </div>
+                {!isLast && <div className="mt-1 h-5 w-0.5 bg-rbx-border" />}
+              </div>
+              <span
+                className={cn(
+                  "pt-0.5 text-sm font-semibold",
+                  done || current ? "text-rbx-text" : "text-rbx-muted"
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
