@@ -11,7 +11,6 @@ import { syncGameBotCapacities } from "@/server/services/bot-capacity";
 import { getGameDeliveryConfig } from "@/server/services/game-delivery-config";
 import { dispatchDeliveryJob, resolveControllerType } from "@/server/bot-controller/BotControllerService";
 import { createMM2Session } from "@/server/services/mm2-delivery";
-import { isBotLive, syncStaleBotsOffline } from "@/server/services/bot-presence";
 
 export type DeliveryItem = {
   productId: string;
@@ -41,7 +40,7 @@ export type BotCandidate = {
 };
 
 type BotWithInventory = Prisma.BotAccountGetPayload<{
-  include: { inventories: true; session: true };
+  include: { inventories: true };
 }>;
 
 export function getAvailableInventory(
@@ -74,7 +73,7 @@ export function selectEligibleBot(
   const eligible = bots
     .filter(
       (bot) =>
-        (bot.status === BotStatus.ONLINE || bot.status === BotStatus.BUSY) &&
+        bot.status === BotStatus.ONLINE &&
         bot.currentDeliveries < bot.maxConcurrentDeliveries &&
         botHasSufficientInventory(bot.inventories, requiredItems)
     )
@@ -90,7 +89,7 @@ export function getInventoryShortages(
 ) {
   const onlineWithCapacity = bots.filter(
     (bot) =>
-      (bot.status === BotStatus.ONLINE || bot.status === BotStatus.BUSY) &&
+      bot.status === BotStatus.ONLINE &&
       bot.currentDeliveries < bot.maxConcurrentDeliveries
   );
 
@@ -135,21 +134,18 @@ export async function findEligibleBot(
   }>;
 }> {
   await syncGameBotCapacities(game);
-  await syncStaleBotsOffline(game);
 
   const bots = await prisma.botAccount.findMany({
-    where: { game, status: { in: [BotStatus.ONLINE, BotStatus.BUSY] } },
-    include: { inventories: true, session: true },
+    where: { game, status: BotStatus.ONLINE },
+    include: { inventories: true },
     orderBy: [{ currentDeliveries: "asc" }, { robloxUsername: "asc" }],
   });
 
-  const liveBots = bots.filter(isBotLive);
-
-  if (liveBots.length === 0) {
+  if (bots.length === 0) {
     return { bot: null, error: "No bot available" };
   }
 
-  const botsWithCapacity = liveBots.filter(
+  const botsWithCapacity = bots.filter(
     (bot) => bot.currentDeliveries < bot.maxConcurrentDeliveries
   );
 
@@ -270,7 +266,10 @@ export async function assignBotAndCreateDeliveryJob(
         data: {
           claimId: target.type === "claim" ? target.claimId : null,
           withdrawalId: target.type === "withdrawal" ? target.withdrawalId : null,
-          status: DeliveryStatus.QUEUED,
+          // Trading flows (requiresFriend/requiresCustomerJoin) must not be picked
+          // up by the Python bot until the customer has joined the private server.
+          // WAITING_USER → QUEUED transition happens via /api/bot/jobs/[jobId]/customer-joined.
+          status: isMailbox ? DeliveryStatus.QUEUED : DeliveryStatus.WAITING_USER,
           controllerType: resolveControllerType(),
         },
       });
