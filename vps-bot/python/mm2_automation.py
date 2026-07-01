@@ -2,17 +2,24 @@
 MM2 in-game trade automation.
 
 Template images required in python/assets/:
-  mm2_leaderboard_button.png   — the player list / leaderboard icon in the MM2 HUD
-  mm2_trade_button.png         — "Trade" option in the player context menu
-  mm2_ready_button.png         — "Ready" button inside the trade window
-  mm2_trade_accepted.png       — the trade completion / accepted screen
-  mm2_trade_close_button.png   — the close / OK button on the trade accepted screen
-  mm2_item_<name>.png          — one image per deliverable item (name = product name,
-                                  lowercase, spaces → underscores, e.g. mm2_item_swirly_blade.png)
+  mm2_trade_button.png      — "Trade" option in the player context menu
+                               (screenshot the Profile/Trade popup, crop just the Trade button)
+  mm2_accept_button.png     — green "ACCEPT" button inside the trade window
+  mm2_item_<name>.png       — item icon in the left inventory panel of the trade window
+                               e.g. mm2_item_swirly_blade.png for "Swirly Blade"
 
-How to capture templates:
-  1. Launch MM2 on the VPS, open each UI element, screenshot with Snipping Tool.
-  2. Crop to the exact button/icon and save as the filename above in python/assets/.
+How to capture templates (use Windows Snipping Tool or Win+Shift+S):
+  1. Launch MM2 in Roblox as the bot account.
+  2. Click on any player → the Profile/Trade menu appears → snip just the "Trade" button
+     → save as mm2_trade_button.png
+  3. Open a trade → snip the item icon from the LEFT inventory panel (not YOUR OFFER side)
+     → save as mm2_item_swirly_blade.png  (or mm2_item_<your_item>.png)
+  4. Snip the green ACCEPT button at the bottom of the trade window
+     → save as mm2_accept_button.png
+  All files go in:  vps-bot/python/assets/
+
+Note: The MM2 player panel is always visible on the right side of the screen —
+there is NO separate leaderboard button to click.
 """
 from __future__ import annotations
 
@@ -27,7 +34,6 @@ from screen_detector import (
     find_text,
     find_template,
     click_at,
-    wait_for_template,
 )
 
 log = logging.getLogger(__name__)
@@ -50,58 +56,46 @@ def _off():
 # ── Internal steps ────────────────────────────────────────────────────────────
 
 
-def _open_player_list() -> None:
-    """Click the MM2 leaderboard / player list button in the HUD."""
-    frame = _frame()
-    if frame is None:
-        raise RuntimeError("Roblox window not found when opening player list")
-
-    if not click_template("mm2_leaderboard_button.png", frame, _off()):
-        raise RuntimeError(
-            "mm2_leaderboard_button.png not found on screen. "
-            "Ensure the template is captured and Roblox is in focus."
-        )
-    time.sleep(_STEP_DELAY)
-
-
-def _click_player_in_list(username: str) -> None:
+def _find_and_click_player(username: str) -> None:
     """
-    Locate the customer's username in the MM2 player list via OCR and click it.
-    Raises RuntimeError if the player is not visible.
+    Find the customer's username via OCR in the MM2 player panel (always
+    visible on the right side of the screen) and click it to open the
+    Profile / Trade context menu.
     """
     frame = _frame()
     if frame is None:
-        raise RuntimeError("Roblox window not found when searching for player in list")
+        raise RuntimeError("Roblox window not found when searching for player")
 
     pos = find_text(frame, username)
     if pos is None:
         raise RuntimeError(
-            f"Player '{username}' not found in MM2 player list via OCR. "
-            "They may have left the server."
+            f"Player '{username}' not visible in MM2 player panel. "
+            "They may have left the server or not yet joined."
         )
 
     click_at(pos[0], pos[1], _off())
-    time.sleep(_CLICK_DELAY)
+    time.sleep(_STEP_DELAY)
 
 
 def _click_trade_in_context_menu() -> None:
-    """Click the Trade option that appears in the player context menu."""
+    """Click the 'Trade' option in the player context menu."""
     frame = _frame()
     if frame is None:
         raise RuntimeError("Roblox window not found when clicking Trade button")
 
     if not click_template("mm2_trade_button.png", frame, _off()):
         raise RuntimeError(
-            "mm2_trade_button.png not found. "
-            "The player context menu may not be open."
+            "mm2_trade_button.png not found — context menu may not be open, "
+            "or the template needs to be (re)captured."
         )
     time.sleep(_STEP_DELAY)
 
 
 def _add_item_to_trade(item_name: str, quantity: int) -> None:
     """
-    Click the item slot inside the MM2 trade window `quantity` times.
-    Template filename: mm2_item_<name_lowered_underscored>.png
+    Click the item icon in the LEFT inventory panel of the trade window
+    `quantity` times. Each click adds one copy to YOUR OFFER.
+    Template: mm2_item_<item_name_lowercased_underscored>.png
     """
     template = f"mm2_item_{item_name.lower().replace(' ', '_')}.png"
     for _ in range(quantity):
@@ -110,46 +104,64 @@ def _add_item_to_trade(item_name: str, quantity: int) -> None:
             raise RuntimeError("Roblox window not found while adding item to trade")
         if not click_template(template, frame, _off()):
             raise RuntimeError(
-                f"Item template '{template}' not found in trade UI. "
-                "Capture the item icon from the MM2 trade screen."
+                f"Item template '{template}' not found in the trade inventory panel. "
+                "Capture the item icon from the LEFT panel of the open trade window "
+                f"and save it as vps-bot/python/assets/{template}"
             )
         time.sleep(_CLICK_DELAY)
 
 
-def _click_ready() -> None:
-    """Click the Ready button to submit the trade offer to the customer."""
+def _click_accept() -> None:
+    """Click the green ACCEPT button to submit the bot's trade offer."""
     frame = _frame()
     if frame is None:
-        raise RuntimeError("Roblox window not found when clicking Ready")
+        raise RuntimeError("Roblox window not found when clicking Accept")
 
-    if not click_template("mm2_ready_button.png", frame, _off()):
-        raise RuntimeError("mm2_ready_button.png not found — trade may not be open.")
+    if not click_template("mm2_accept_button.png", frame, _off()):
+        raise RuntimeError(
+            "mm2_accept_button.png not found — trade window may not be open, "
+            "or the template needs to be (re)captured."
+        )
     time.sleep(_CLICK_DELAY)
 
 
-def _wait_for_acceptance(timeout: float) -> None:
+def _wait_for_trade_complete(timeout: float) -> None:
     """
-    Block until the 'trade accepted' screen appears.
-    Raises TimeoutError if the customer doesn't accept within `timeout` seconds.
+    After bot clicks ACCEPT, wait for:
+      Phase 1 — 'YOU HAVE ACCEPTED.' text appears  (our click registered).
+      Phase 2 — trade window closes                (customer also accepted).
+
+    Raises TimeoutError if either phase exceeds `timeout` seconds total.
     """
-    pos = wait_for_template(
-        "mm2_trade_accepted.png",
-        get_frame=_frame,
-        timeout=timeout,
-        interval=1.5,
-    )
-    if pos is None:
+    deadline = time.monotonic() + timeout
+
+    # Phase 1: confirm our accept registered
+    log.debug("[mm2] Waiting for 'YOU HAVE ACCEPTED.' confirmation...")
+    while time.monotonic() < deadline:
+        frame = _frame()
+        if frame is not None and find_text(frame, "ACCEPTED") is not None:
+            log.debug("[mm2] Bot ACCEPT confirmed.")
+            break
+        time.sleep(1.0)
+    else:
         raise TimeoutError(
-            f"Trade not accepted by customer within {timeout:.0f}s."
+            f"'YOU HAVE ACCEPTED.' did not appear within {timeout:.0f}s — "
+            "the ACCEPT click may have missed the button."
         )
 
-    time.sleep(0.5)
+    # Phase 2: wait for customer to also accept (ACCEPT button disappears = window closed)
+    log.debug("[mm2] Waiting for customer to accept...")
+    while time.monotonic() < deadline:
+        frame = _frame()
+        if frame is not None:
+            if find_template("mm2_accept_button.png", frame, threshold=0.78) is None:
+                log.debug("[mm2] Trade window closed — trade complete.")
+                return
+        time.sleep(1.5)
 
-    # Dismiss the trade accepted screen.
-    frame = _frame()
-    if frame is not None:
-        click_template("mm2_trade_close_button.png", frame, _off())
-    time.sleep(_CLICK_DELAY)
+    raise TimeoutError(
+        f"Customer did not accept the trade within {timeout:.0f}s."
+    )
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -161,15 +173,13 @@ def run_delivery(job: dict) -> list[dict]:
 
     Sequence:
       1. Focus Roblox window.
-      2. Open MM2 player list.
-      3. Locate customer via OCR → click.
-      4. Click Trade in context menu.
-      5. Add each item to the trade window.
-      6. Click Ready (sends trade offer to customer).
-      7. Wait for customer to accept.
-      8. Close the accepted screen.
+      2. OCR-find the customer in the right-side MM2 player panel → click.
+      3. Click 'Trade' in the context menu.
+      4. Click each item to add to YOUR OFFER.
+      5. Click ACCEPT.
+      6. Wait for 'YOU HAVE ACCEPTED.' then for the trade window to close.
 
-    Returns a list of delivered items (mirrors job items) for the backend report.
+    Returns a list of delivered items for the backend report.
     Raises RuntimeError / TimeoutError on any failure.
     """
     customer: str = job["customerRobloxUsername"]
@@ -178,21 +188,20 @@ def run_delivery(job: dict) -> list[dict]:
     log.info(f"[mm2] Delivering to {customer}: {[i['name'] for i in items]}")
 
     if not rbx.focus():
-        raise RuntimeError("Roblox window not found — is Roblox running on the VPS?")
+        raise RuntimeError("Roblox window not found — is Roblox running?")
     time.sleep(1.0)
 
-    _open_player_list()
-    _click_player_in_list(customer)
+    _find_and_click_player(customer)
     _click_trade_in_context_menu()
 
     for item in items:
         _add_item_to_trade(item["name"], item.get("quantity", 1))
 
-    _click_ready()
+    _click_accept()
 
     from config import TRADE_TIMEOUT
-    _wait_for_acceptance(TRADE_TIMEOUT)
+    _wait_for_trade_complete(TRADE_TIMEOUT)
 
     delivered = [{"name": i["name"], "quantity": i["quantity"]} for i in items]
-    log.info(f"[mm2] Trade accepted by {customer}. Delivered: {delivered}")
+    log.info(f"[mm2] Trade complete for {customer}. Delivered: {delivered}")
     return delivered
