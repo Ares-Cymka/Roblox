@@ -61,4 +61,14 @@ export const api = {
       method: "POST",
     });
   },
+
+  expireStaleOrders(timeoutHours: number) {
+    return apiFetch<{ expired: number; total: number; withdrawalCodes: string[] }>(
+      "/api/bot/expire-stale-orders",
+      {
+        method: "POST",
+        body: JSON.stringify({ timeoutHours }),
+      }
+    );
+  },
 };

@@ -16,4 +16,5 @@ export const config = {
   heartbeatIntervalMs: Number(process.env.HEARTBEAT_INTERVAL_MS ?? "30000"),
   friendPollIntervalMs: Number(process.env.FRIEND_POLL_INTERVAL_MS ?? "5000"),
   presencePollIntervalMs: Number(process.env.PRESENCE_POLL_INTERVAL_MS ?? "10000"),
+  staleOrderTimeoutHours: Number(process.env.STALE_ORDER_TIMEOUT_HOURS ?? "2"),
 } as const;

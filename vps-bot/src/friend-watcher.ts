@@ -2,6 +2,10 @@ import noblox from "noblox.js";
 import { api, type WaitingEntry } from "./api-client";
 import { config } from "./config";
 import { resolveUserId } from "./user-resolver";
+import { reconnectNoblox } from "./index";
+
+const MAX_CONSECUTIVE_ERRORS = 5;
+let consecutiveErrors = 0;
 
 export function startFriendWatcher(): NodeJS.Timeout {
   async function poll() {
@@ -13,7 +17,10 @@ export function startFriendWatcher(): NodeJS.Timeout {
           w.withdrawalStatus === "WAITING_FRIEND_REQUEST"
       );
 
-      if (friendRequestWaiting.length === 0) return;
+      if (friendRequestWaiting.length === 0) {
+        consecutiveErrors = 0;
+        return;
+      }
 
       // Roblox's friend-requests API no longer includes the sender's username,
       // so match by resolved userId instead of name.
@@ -30,7 +37,10 @@ export function startFriendWatcher(): NodeJS.Timeout {
           .map((r) => [r.userId as number, r.entry])
       );
 
-      if (expectedMap.size === 0) return;
+      if (expectedMap.size === 0) {
+        consecutiveErrors = 0;
+        return;
+      }
 
       const page = await noblox.getFriendRequests("Asc", 100);
 
@@ -52,8 +62,26 @@ export function startFriendWatcher(): NodeJS.Timeout {
             )
           );
       }
+
+      consecutiveErrors = 0;
     } catch (err) {
-      console.error(`[friend-watcher] Poll error:`, err instanceof Error ? err.message : err);
+      consecutiveErrors++;
+      console.error(
+        `[friend-watcher] Poll error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`,
+        err instanceof Error ? err.message : err
+      );
+
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        consecutiveErrors = 0;
+        try {
+          await reconnectNoblox();
+        } catch (reconnectErr) {
+          console.error(
+            "[friend-watcher] Reconnect failed:",
+            reconnectErr instanceof Error ? reconnectErr.message : reconnectErr
+          );
+        }
+      }
     }
   }
 
