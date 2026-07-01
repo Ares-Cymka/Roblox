@@ -11,13 +11,23 @@ async function main() {
   console.log(`[bot] Game     : ${config.game}`);
   console.log(`[bot] MM2 Place: ${config.mm2PlaceId}`);
 
-  await noblox.setCookie(config.robloxCookie);
-  const me = await noblox.getCurrentUser();
-  console.log(`[bot] Authenticated as: ${me.UserName} (${me.UserId})`);
+  // noblox.js's own setCookie() validation calls the retired /mobileapi/userinfo
+  // endpoint (404 on current Roblox), so we skip it and validate via the
+  // still-supported users.roblox.com endpoint instead.
+  await noblox.setCookie(config.robloxCookie, false);
 
-  if (me.UserName.toLowerCase() !== config.botUsername.toLowerCase()) {
+  const authRes = await fetch("https://users.roblox.com/v1/users/authenticated", {
+    headers: { Cookie: `.ROBLOSECURITY=${config.robloxCookie}` },
+  });
+  if (!authRes.ok) {
+    throw new Error(`Cookie validation failed: ${authRes.status} ${authRes.statusText}`);
+  }
+  const me = (await authRes.json()) as { id: number; name: string };
+  console.log(`[bot] Authenticated as: ${me.name} (${me.id})`);
+
+  if (me.name.toLowerCase() !== config.botUsername.toLowerCase()) {
     throw new Error(
-      `Cookie mismatch: authenticated as "${me.UserName}" but BOT_ROBLOX_USERNAME="${config.botUsername}"`
+      `Cookie mismatch: authenticated as "${me.name}" but BOT_ROBLOX_USERNAME="${config.botUsername}"`
     );
   }
 

@@ -1,22 +1,7 @@
 import noblox from "noblox.js";
 import { api, type WaitingEntry } from "./api-client";
 import { config } from "./config";
-
-// Cache Roblox user IDs so we don't fetch them on every poll tick.
-const userIdCache = new Map<string, number>();
-
-async function resolveUserId(username: string): Promise<number | null> {
-  const cached = userIdCache.get(username.toLowerCase());
-  if (cached !== undefined) return cached;
-
-  try {
-    const id = await noblox.getIdFromUsername(username);
-    userIdCache.set(username.toLowerCase(), id);
-    return id;
-  } catch {
-    return null;
-  }
-}
+import { resolveUserId } from "./user-resolver";
 
 export function startPresenceWatcher(): NodeJS.Timeout {
   async function poll() {
@@ -44,11 +29,13 @@ export function startPresenceWatcher(): NodeJS.Timeout {
 
       if (valid.length === 0) return;
 
-      const presences = await noblox.getPresence(valid.map((v) => v.userId));
+      const { userPresences } = await noblox.getPresences(valid.map((v) => v.userId));
+      const presenceByUserId = new Map(userPresences.map((p) => [p.userId, p]));
 
       for (let i = 0; i < valid.length; i++) {
-        const presence = presences[i];
-        const { entry } = valid[i];
+        const { entry, userId } = valid[i];
+        const presence = presenceByUserId.get(userId);
+        if (!presence) continue;
 
         // userPresenceType 2 = in-game
         const isInMM2 =
