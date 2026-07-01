@@ -405,7 +405,7 @@ export async function startWithdrawal(withdrawalId: string) {
         blocking?.withdrawalCode ?? blocking?.claimCode ?? null;
       const hint = blockingCode
         ? `The delivery bot is currently assigned to ${blocking?.withdrawalCode ? "withdrawal" : "claim"} ${blockingCode}. Complete or cancel it in Admin first.`
-        : "No delivery bot is connected right now. Start Roblox as the bot account and keep the bot program sending heartbeats, then try again.";
+        : "All delivery bots are currently busy. Please try again shortly.";
 
       return {
         error: result.error,

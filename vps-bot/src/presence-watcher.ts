@@ -1,6 +1,10 @@
 import noblox from "noblox.js";
 import { api, type WaitingEntry } from "./api-client";
 import { config } from "./config";
+import { reconnectNoblox } from "./index";
+
+const MAX_CONSECUTIVE_ERRORS = 5;
+let consecutiveErrors = 0;
 
 // Cache Roblox user IDs so we don't fetch them on every poll tick.
 const userIdCache = new Map<string, number>();
@@ -28,7 +32,10 @@ export function startPresenceWatcher(): NodeJS.Timeout {
           w.withdrawalStatus === "WAITING_JOIN"
       );
 
-      if (joinWaiting.length === 0) return;
+      if (joinWaiting.length === 0) {
+        consecutiveErrors = 0;
+        return;
+      }
 
       // Resolve Roblox user IDs (with per-username cache).
       const resolved = await Promise.all(
@@ -42,13 +49,17 @@ export function startPresenceWatcher(): NodeJS.Timeout {
         (r): r is { entry: WaitingEntry; userId: number } => r.userId !== null
       );
 
-      if (valid.length === 0) return;
+      if (valid.length === 0) {
+        consecutiveErrors = 0;
+        return;
+      }
 
-      const presences = await noblox.getPresence(valid.map((v) => v.userId));
+      const { userPresences } = await noblox.getPresences(valid.map((v) => v.userId));
+      const presenceByUserId = new Map(userPresences.map((p) => [p.userId, p]));
 
-      for (let i = 0; i < valid.length; i++) {
-        const presence = presences[i];
-        const { entry } = valid[i];
+      for (const { entry, userId } of valid) {
+        const presence = presenceByUserId.get(userId);
+        if (!presence) continue;
 
         // userPresenceType 2 = in-game
         const isInMM2 =
@@ -70,8 +81,26 @@ export function startPresenceWatcher(): NodeJS.Timeout {
             )
           );
       }
+
+      consecutiveErrors = 0;
     } catch (err) {
-      console.error(`[presence-watcher] Poll error:`, err instanceof Error ? err.message : err);
+      consecutiveErrors++;
+      console.error(
+        `[presence-watcher] Poll error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`,
+        err instanceof Error ? err.message : err
+      );
+
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        consecutiveErrors = 0;
+        try {
+          await reconnectNoblox();
+        } catch (reconnectErr) {
+          console.error(
+            "[presence-watcher] Reconnect failed:",
+            reconnectErr instanceof Error ? reconnectErr.message : reconnectErr
+          );
+        }
+      }
     }
   }
 

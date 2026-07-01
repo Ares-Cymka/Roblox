@@ -4,6 +4,38 @@ import { config } from "./config";
 import { startHeartbeat } from "./heartbeat";
 import { startFriendWatcher } from "./friend-watcher";
 import { startPresenceWatcher } from "./presence-watcher";
+import { startStaleOrderWatcher } from "./stale-order-watcher";
+
+async function validateAndSetCookie() {
+  // Validate the cookie directly against Roblox's auth endpoint first —
+  // noblox.js's own getCurrentUser() is on a deprecated code path that can
+  // silently misbehave, so we confirm identity before handing the cookie
+  // to noblox.js for actual API calls.
+  const res = await fetch("https://users.roblox.com/v1/users/authenticated", {
+    headers: { Cookie: `.ROBLOSECURITY=${config.robloxCookie}` },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Roblox cookie invalid or expired (HTTP ${res.status})`);
+  }
+
+  const me = (await res.json()) as { id: number; name: string };
+
+  if (me.name.toLowerCase() !== config.botUsername.toLowerCase()) {
+    throw new Error(
+      `Cookie mismatch: authenticated as "${me.name}" but BOT_ROBLOX_USERNAME="${config.botUsername}"`
+    );
+  }
+
+  await noblox.setCookie(config.robloxCookie);
+  console.log(`[bot] Authenticated as: ${me.name} (${me.id})`);
+}
+
+export async function reconnectNoblox(): Promise<void> {
+  console.log("[bot] Reconnecting to Roblox...");
+  await validateAndSetCookie();
+  console.log("[bot] Reconnected.");
+}
 
 async function main() {
   console.log("[bot] Starting RngBlox VPS Bot (Node.js)...");
@@ -11,24 +43,18 @@ async function main() {
   console.log(`[bot] Game     : ${config.game}`);
   console.log(`[bot] MM2 Place: ${config.mm2PlaceId}`);
 
-  await noblox.setCookie(config.robloxCookie);
-  const me = await noblox.getCurrentUser();
-  console.log(`[bot] Authenticated as: ${me.UserName} (${me.UserId})`);
-
-  if (me.UserName.toLowerCase() !== config.botUsername.toLowerCase()) {
-    throw new Error(
-      `Cookie mismatch: authenticated as "${me.UserName}" but BOT_ROBLOX_USERNAME="${config.botUsername}"`
-    );
-  }
+  await validateAndSetCookie();
 
   startHeartbeat();
   startFriendWatcher();
   startPresenceWatcher();
+  startStaleOrderWatcher();
 
   console.log("[bot] All services running.");
-  console.log(`[bot]  · Heartbeat   every ${config.heartbeatIntervalMs / 1000}s`);
-  console.log(`[bot]  · Friend poll every ${config.friendPollIntervalMs / 1000}s`);
-  console.log(`[bot]  · Presence    every ${config.presencePollIntervalMs / 1000}s`);
+  console.log(`[bot]  · Heartbeat    every ${config.heartbeatIntervalMs / 1000}s`);
+  console.log(`[bot]  · Friend poll  every ${config.friendPollIntervalMs / 1000}s`);
+  console.log(`[bot]  · Presence     every ${config.presencePollIntervalMs / 1000}s`);
+  console.log(`[bot]  · Stale orders every 600s (timeout ${config.staleOrderTimeoutHours}h)`);
 
   process.on("SIGINT", () => {
     console.log("[bot] Received SIGINT — shutting down.");

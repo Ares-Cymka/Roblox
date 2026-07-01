@@ -6,7 +6,6 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { markDeliveryJobDelivered } from "@/server/services/admin-delivery";
-import { touchBotPresence } from "@/server/services/bot-presence";
 
 export interface BotDetectedItem {
   name: string;
@@ -170,8 +169,6 @@ export async function reportBotInventoryFromAgent(input: {
       data: { status: BotStatus.ONLINE },
     });
   });
-
-  await touchBotPresence(bot.id);
 
   return {
     ok: true as const,
